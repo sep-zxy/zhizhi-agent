@@ -1,92 +1,91 @@
 <div align="center">
   <img src="docs/assets/brand/icon.svg" width="88" height="88" alt="知枝图标" />
   <h1>知枝 · Zhizhi Agent</h1>
-  <p><strong>把平时读的文章、写的代码、问过 AI 的东西，整理成能查也能练的个人知识库。</strong></p>
-  <p>资料丢进来，先洗干净再存成知识卡；每张卡自动配题，做错的单独记下来。</p>
+  <p><strong>面向工程学习的 Agent-Native LLM Wiki 与练题系统。</strong></p>
+  <p>将多源资料与 Git 提交清洗为标准 Markdown，沉淀进可追溯的个人知识库，并通过强绑定题库、独立错题本与知识地图完成巩固。</p>
   <p>
     <a href="https://github.com/sep-zxy/zhizhi-agent/actions/workflows/ci.yml"><img src="https://github.com/sep-zxy/zhizhi-agent/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
     <a href="https://github.com/sep-zxy/zhizhi-agent/actions/workflows/cd.yml"><img src="https://github.com/sep-zxy/zhizhi-agent/actions/workflows/cd.yml/badge.svg" alt="CD" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1f5e47.svg" alt="MIT License" /></a>
   </p>
   <p>
-    <a href="#这个项目要解决什么">要解决什么</a> ·
-    <a href="#它怎么工作">它怎么工作</a> ·
-    <a href="#界面和练题怎么设计">界面与练题</a> ·
-    <a href="#现在做到哪一步了">当前进度</a> ·
-    <a href="#跑起来看看">跑起来看看</a> ·
+    <a href="#项目定位">项目定位</a> ·
+    <a href="#双循环架构与多源解析">双循环架构</a> ·
+    <a href="#预设情境多页与知返题库">预设多页与题库</a> ·
+    <a href="#当前阶段">当前阶段</a> ·
+    <a href="#快速开始与开发">快速开始</a> ·
     <a href="docs/architecture.md">架构文档</a>
   </p>
 </div>
 
-## 这个项目要解决什么
+## 项目定位
 
-写代码、看文档、刷技术视频、跟 AI 聊方案，这些事每天都在发生，但东西散在十几个地方。收藏夹吃灰，聊天记录翻不到，真正遇到同类问题还是得重新搜一遍。
+日常开发与学习中，文章、视频、文档、代码提交和 AI 对话分散在不同地方：收藏容易吃灰，聊过的问题容易忘，直接把原始文件塞进主对话模型又会迅速拉低回答质量。
 
-知枝想做的是一件很具体的事：**给你一个带 AI 助手的知识库，而且能顺手出题把你考会。**
+**Zhizhi Agent** 把这些环节收拢到一套以个人知识库为核心的工作流里。它从第一版起按**多用户数据隔离**设计，支持零 Docker 本地单机运行，也支持直接部署到团队共享服务器。
 
-你在里面可以做四件事：
+系统由四个主要能力协同工作：
 
-- **收资料**：把网页链接、B 站/YouTube 视频、本地 PDF/HTML/Markdown 文件，或者你自己的 Git 提交记录喂给它。
-- **存知识卡**：整理成一个个独立的知识点页面，可以修改、查重、看历史版本，也能按主题串起来。
-- **问问题**：只有一个聊天窗口。你问它问题时，它自己判断先翻你的知识库；库里没记过，就去网上搜，不胡说。
-- **刷题和查漏**：每张知识卡背后挂着对应的练习题。做错了会进独立的错题本，知识地图里还能一眼看出哪一块还没学透。
+- **插槽式来源解析**：收纳网页链接、视频字幕与截帧、PDF/HTML/Word/Markdown 本地文件，以及 Git 跨端提交总结。
+- **LLM Wiki 知识库**：以单个知识点为单元沉淀知识卡，支持查重补卡、主题组织、预览确认入库与历史版本回退。
+- **统一 AI 问答**：单一对话入口。Pi Agent 自主判断优先检索当前账号知识库并附出处，库内未命中时触发联网搜索兜底。
+- **知返题库与地图雷达**：知识卡强绑定 1:N 题库，错题页与入库完全解耦并支持归档删除，知识雷达基于知识地图拓扑识别薄弱与缺失区域。
 
-项目目前还在早期开发，基座刚搭完，业务功能正按模块陆续补上。下面两张图画的是我们要做出来的样子，当前已经跑通的部分看[现在做到哪一步了](#现在做到哪一步了)。
+项目目前处于早期开发阶段，已完成工程基座与 Pi Agent 核心层接入，各业务域正并行推进。以下两张图展示完整目标架构，当前已完成与待补齐部分见[当前阶段](#当前阶段)。
 
-## 它怎么工作
+## 双循环架构与多源解析
 
-![知枝核心流程：知识来源插槽经统一 Markdown 中间层进入 Pi Agent 主循环，产出知识卡、1:N 题库与知识地图](docs/assets/vision/architecture-overview.png)
+![知枝 · 多源解析与 Pi Agent 双循环架构](docs/assets/vision/architecture-overview.png)
 
-如果把杂乱的 PDF、长视频字幕、几十条零碎 Git commit 直接塞给主聊天模型，回答质量很快就会垮掉。所以我们把流程拆成了两段：
+原始材料不允许直接进入主对话循环，整个数据链路分为「解析子循环」与「Agent 主循环」两级：
 
-1. **先用插槽解析，再进主循环**
-   每种来源都是一个独立插槽（支持内置插件，也可以挂外部 MCP 服务）。像 B 站、抖音这种经常改接口的站点，拆出去单独维护，拿掉任意一个也不影响主程序运行。
-   文件进来之后，先交给后台的 AI 子循环处理表格、提取图片存起来，统一洗成干净的 Markdown，校验通过后再交给你选去向：**仅收藏**、**放待学**，或者**预览后存成知识卡**。
+1. **插槽式来源层与统一 Markdown 中间层**
+   每种来源封装为可独立拆卸的插件槽（支持进程内插件与外部 MCP 服务）。强反爬的视频站点或基于开源项目二开的文档解析器可以单独升级或卸载，不影响主干运行。
+   解析任务在异步 **AI 解析子循环** 中执行：完成 PDF 表格重排、图片托管（LocalFs / OSS）和去噪清洗，输出通过运行时 Schema 校验的 `Standard Markdown`，再由统一三出口决定去向：**仅收藏**、**加入待学**或**预览存卡**。
 
-2. **Git 提交只留架构思路，不囤源码**
-   采集器把一堆零散提交去噪合并后，先总结成架构层面的 Markdown（当时遇到什么问题、怎么取舍的），彻底脱离原仓库代码片段。以后原仓库删了，知识卡和题目照样独立可用。
+2. **Git 采集器剥离源码，保留架构抽象**
+   Win/Mac 跨端采集器先将多次零碎提交去噪归并，提炼出架构层面的问题与方案权衡并转为标准 Markdown。知识卡和练习题不绑定原仓库、不囤大段业务源码，原仓库删除后依然完整可读。
 
-3. **一套代码，个人电脑和团队服务器都能跑**
-   从第一版起就做了多人账号隔离，所有数据都按 `user_id` 分开。你一个人想在本地用，不用装 Docker，直接 `pnpm dev` 就能跑嵌入式数据库；团队要部署到一台共享服务器，配个 PostgreSQL 连接串就能无缝切过去。
+3. **一套底座，零 Docker 本地与服务器双形态**
+   全表强制绑定 `user_id` 并配合 RLS 隔离。本地开发或个人单机使用时，默认跑嵌入式 PGlite、本地文件存储和数据库持久化队列（V1 无需 Redis 与 Docker）；迁移到团队共享服务器时，只需配置 PostgreSQL 连接串与对象存储即可无缝切换。
 
-| 平时遇到的问题 | 在知枝里怎么用 |
+| 使用场景 | 系统处理方式 |
 |---|---|
-| 搜到一篇好文章或长视频，怕收藏完就忘 | 丢进来源页，后台洗成图文 Markdown，预览删改后一键存成知识卡或放待学 |
-| 项目一天提交几十次，想复盘却懒得翻 diff | 跨端 Git 采集器把同主题提交归并成 2～3 个架构要点，不含冗长源码 |
-| 忘了自己以前记没记过某个坑 | 直接在问答页问；Agent 优先翻你的知识库并附出处，没找到再去联网搜 |
-| 聊着聊着想把结论存下来，又怕 AI 乱建卡 | 平时关着「生成知识卡」开关只聊天；想存的时候打开开关，先预览，点保存才入库 |
+| 收录网页、长视频或 PDF 资料 | 插件提取正文/字幕与关键帧，经解析子循环洗成标准 Markdown，预览删改后走统一三出口 |
+| 复盘项目中的高频 Git 提交 | 采集器将同主题提交归并为少数架构要点，脱离具体源码片段生成独立知识卡或待学项 |
+| 回顾既有笔记或探索未知问题 | 在统一问答页提问；Agent 优先查当前账号知识库并附出处，未命中时自动联网搜索 |
+| 将对话结论沉淀进知识库 | 默认关闭「生成知识卡」开关仅对话与推旧卡；打开开关后出草稿预览，点击保存才正式入库 |
 
-## 界面和练题怎么设计
+## 预设情境多页与知返题库
 
-![知枝界面与练题闭环：6 个独立功能页、页内受控卡片槽支持钉住、右侧对话流通过开关控制可用工具](docs/assets/vision/workspace-and-quiz-loop.png)
+![知枝 · 预设情境多页与知返 1:N 题库闭环](docs/assets/vision/workspace-and-quiz-loop.png)
 
-我们不想做成“全靠打字聊天”的黑盒界面，也不想让 AI 随机把整个页面改乱。
+前端不做无约束的自由生成 UI，而是把页面骨架与 Agent 操控范围划清边界：
 
-- **按功能分成 6 个独立页面**：问答、搜索、来源、Wiki、地图雷达、错题本，每个页面都有固定布局，点按钮就能直接操作，手机端也能自然变成底部 6 个 Tab。
-- **页内放受控卡片槽，支持「钉住」**：在问答页里，Agent 可以把知识卡、草稿对比卡、选择题卡直接投到中间区域。你点一下卡片右上角的「钉住」，后面再怎么继续聊，它都不会把这张卡顶掉。退出重登时，记忆系统会把你的卡片排布和常用开关恢复回来。
-- **题型做成工具，开关直接锁权限**：每种题型是一个独立的 Agent 工具。V1 先做好**选择题（带解析）**，后续再插判断题、填空题、问答题。界面上把哪个题型关了，后端就不会把这个工具发给模型，它绝对不会乱出题。
-- **一张卡挂多道题，入库默认先出两道**：新知识卡点保存立即返回，后台异步默认出 2 道选择题——一道考**理解概念**，一道考**实际场景怎么用**（怕费 Token 可以在设置里关掉）。以后你又传了新文档补充这张卡，AI 会先看已有题目覆盖了没，没覆盖才补新题。
-- **错题本完全独立，能归档能删**：错题页只做客观记录，不跟入库流程缠在一起。觉得某道错题已经彻底会了，可以直接归档或删掉，免得越攒越多没法看。
-- **地图看全局，雷达指方向**：知识地图把相关的卡连起来，按掌握情况标颜色；知识雷达直接读这张地图，告诉你已经掌握了哪一块、缺了哪一块，推荐下一张值得学的卡。
+- **6 个预设情境独立页**：按功能划分为问答页、搜索页、知识来源、LLM Wiki、地图雷达、独立错题页。桌面端采用左侧导航 + 页内多栏，移动端自然收拢为底部 Tab；前端状态与 SSE 通信逻辑沉淀在零 DOM 的 `@zhizhi/client-core`，便于后续扩展移动客户端。
+- **页内受控卡片槽与「钉住（Pin）」保护**：问答页中间区域只允许投放白名单内的预设卡片（知识卡、草稿对比卡、选择题卡等）。点击卡片右上角「钉住」后，后续对话不会覆写该槽位；记忆系统按 `user_id × 情境页` 持久化卡片排布与开关偏好，退出重登后自动续接。
+- **题型工具化与开关白名单裁剪**：每种题型封装为独立 Agent Tool。V1 优先交付**选择题（单/多选 + 解析）**，V1.5 平滑扩充判断题、填空题、问答题与伪代码预测。界面开关直接决定下发给 Pi Agent 的 Tool 白名单，关闭的题型模型无法调用。
+- **1:N 强绑定题库、入库双题与改卡判重**：独立 `card_questions` 表与知识卡强绑定，支持一卡多题挂靠。新卡保存立即返回，后台异步默认生成 2 道选择题（**认知理解** + **情境应用预测**，设置中提供全局开关）；多文档补卡或更新时，系统比对变更 Diff 与已有题目摘要，未覆盖才增量补题；再次复习优先抽未做或曾错题目，也支持追加新题。
+- **独立错题页与地图驱动雷达**：错题页独立于入库流程，仅保存客观练题记录并支持**归档与删除**，防止错题无限积压；知识雷达以知识地图的拓扑与节点掌握度为输入，定位缺失知识点并推荐下一张待学卡。
 
-## 现在做到哪一步了
+## 当前阶段
 
-开发基座已经搭完并跑通了本地与云端 CI（TypeScript 双面检查、`oxlint`、5 条静态门禁、单元测试、Web 构建全绿）：
+开发基座已参考 DeepSeek Harness 工程规范搭建完毕，本地与 GitHub Actions CI（Host/Client 双面类型检查、`oxlint` type-aware、5 条静态门禁、单元测试、Web 构建）全部通过：
 
-- **已经跑通的基座**：
-  - 全栈 TypeScript pnpm Monorepo，参考了 DeepSeek Harness 的工程规范与静态门禁。
-  - 真实接入了 Pi Agent（`@earendil-works/pi-agent-core` 与 `@earendil-works/pi-ai`），支持 DeepSeek、OpenAI 及任意 OpenAI 兼容中转站；没配 API Key 时自动走官方 `fauxProvider` 跑完整工具循环，本地开发和测试不花 Token。
-  - 18 张多租户表结构（Drizzle ORM），本地默认 PGlite 嵌入式数据库 + 本地文件存储 + 数据库队列（V1 不需要装 Redis 和 Docker）；填配置即切 PostgreSQL 与 S3/OSS。
-  - Hono 服务端（注册/登录 JWT、租户隔离中间件、按页面存画布记忆、双通道 SSE 对话）与 React 19 + Tailwind 前端骨架（6 页路由、移动底栏、PWA 配置、问答页钉住与开关演示）。
-- **接下来要补齐的 4 条业务线**（分工见 [docs/architecture.md](docs/architecture.md)）：
-  1. 知识卡与主题页的完整增删改查、版本回退、中文搜索。
-  2. 网页、视频截帧、本地文件解析插件与 AI 解析子循环，以及外部 Python MCP 解析示例。
-  3. Win/Mac Git 采集器与知识地图渲染。
-  4. 知识卡入库异步出 2 题与改卡判重、独立错题页、基于地图的知识雷达。
+- **已完成基座**：
+  - 全栈 TypeScript pnpm Monorepo（`@zhizhi/brand`、`errors`、`contracts`、`db`、`storage`、`jobs`、`plugin-sdk`、`agent-runtime`、`client-core`、`apps/server`、`apps/web`）。
+  - **Pi Agent 核心层**：接入 `@earendil-works/pi-agent-core` 与 `@earendil-works/pi-ai`，支持 DeepSeek、OpenAI 及 OpenAI 兼容接口；无密钥时自动通过官方 `fauxProvider` 跑通完整工具循环与 `beforeToolCall` 拦截。
+  - **存储与异步队列底座**：Drizzle ORM 18 张多租户表（PGlite 零 Docker 本地 / PostgreSQL 生产双驱动）、LocalFs / S3 存储抽象、基于 `async_jobs` 表的持久化队列。
+  - **多租户服务端与 6 页前端骨架**：Hono 鉴权与双通道 SSE `/api/v1/chat/turn`、按情境页画布记忆 `/api/v1/canvas-state`、React 19 + Tailwind v4 + PWA 骨架。
+- **并行推进中的 4 条业务线**（接口边界见 [docs/architecture.md](docs/architecture.md)）：
+  1. **A 线（底座与 Wiki）**：知识卡与主题页 CRUD、预览保存与历史版本回退、中文全文检索。
+  2. **B 线（插槽与中间层）**：网页/视频截帧与本地文件插件、AI 解析子循环 Worker、外部 Python MCP 插件模板。
+  3. **C 线（Git 与地图）**：Win/Mac 跨端 Git 采集器、知识地图关系图谱与掌握状态着色。
+  4. **D 线（Agent 与知返）**：真实检索与联网工具接线、入库异步 2 题与改卡判重 Worker、独立错题页（归档/删除）与地图驱动雷达。
 
-## 跑起来看看
+## 快速开始与开发
 
-需要 Node.js `>= 24.12.0` 和 pnpm `10.x`。本地跑**不需要 Docker**。
+环境要求：**Node.js `>= 24.12.0`**、**pnpm `10.x`**（本地开发不依赖 Docker）。
 
 ```sh
 git clone https://github.com/sep-zxy/zhizhi-agent.git
@@ -95,56 +94,57 @@ pnpm install
 pnpm dev
 ```
 
-启动后：
+启动后访问：
 - 前端页面：`http://127.0.0.1:5173`
-- 后端接口：`http://127.0.0.1:3080`（自动在 `.zhizhi/` 下初始化本地数据库和文件目录）
+- 后端服务：`http://127.0.0.1:3080`（自动在 `.zhizhi/` 下初始化本地嵌入式 PGlite 与附件目录）
 
-本地运行全部检查和测试：
+运行全套类型检查、Lint、5 条静态门禁与测试：
 
 ```sh
 pnpm run check:all
 pnpm --filter @zhizhi/web run build
 ```
 
-如果你想在共享服务器上用容器拉起 PostgreSQL（含 pgvector）和 MinIO：
+如需在共享服务器使用容器拉起 PostgreSQL（含 pgvector）与 MinIO：
 
 ```sh
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
-仓库里已经配好了 GitHub Actions：每次 Push / PR 会跑 `ci.yml` 检查代码和构建；打 `v*` 标签或手动触发 `cd.yml` 会构建镜像推到 GHCR 并生成 Release。
+仓库已内置 GitHub Actions：`.github/workflows/ci.yml` 在每次 Push / PR 执行全套校验与构建；`.github/workflows/cd.yml` 在推送 `v*` 标签或手动触发时构建发布包并推送容器镜像至 GHCR。
 
 ## 目录结构
 
 ```text
 zhizhi-agent/
-├── AGENTS.md / CLAUDE.md       # 工程红线与 AI 协作约定
+├── AGENTS.md / CLAUDE.md       # 工程红线与 AI 协作规范
 ├── docs/
-│   ├── architecture.md         # 分层架构与 4 人并行接口边界
-│   ├── core-guidelines/        # 编码规范
-│   ├── specs/                  # 完整功能树 (v3.2) 与架构设计 (v1.2) HTML
-│   └── assets/                 # 图标与示意图
+│   ├── architecture.md         # 五层架构与 4 人并行接口边界
+│   ├── core-guidelines/        # G / B / F 编码规范
+│   ├── specs/                  # 产品功能树 (v3.2) 与系统架构设计 (v1.2) HTML
+│   └── assets/                 # 品牌图标与目标设计图
 ├── packages/
-│   ├── shared/                 # brand（品牌 ID）、errors、contracts（Zod 契约）
-│   ├── infra/                  # db（PGlite/PG）、storage（LocalFs/S3）、jobs（异步队列）
-│   ├── ingest/plugin-sdk/      # 来源插槽协议（Slot + MCP）与 Markdown 校验
-│   ├── agent/runtime/          # Pi Agent 主循环、工具开关裁剪、独立子循环
-│   └── client/core/            # 零 DOM 前端状态机与 SSE 解析（方便以后做手机端）
+│   ├── shared/                 # brand（品牌 ID）、errors、contracts（共享 Zod 契约）
+│   ├── infra/                  # db（PGlite/PG）、storage（LocalFs/S3）、jobs（持久化队列）
+│   ├── ingest/plugin-sdk/      # 来源插槽注册表（Slot + MCP）与 StandardMarkdown 校验
+│   ├── agent/runtime/          # Pi Agent 主循环、开关工具裁剪与独立子循环
+│   └── client/core/            # 零 DOM 状态机与 SSE 解析（兼容未来移动端）
 ├── apps/
-│   ├── server/                 # Hono 服务端与多租户鉴权
-│   └── web/                    # React 19 + Vite + Tailwind 前端
-├── scripts/                    # 5 条静态门禁（禁 as unknown、查租户隔离、查跨层引用等）
-└── deploy/                     # Dockerfile 与可选 docker-compose.yml
+│   ├── server/                 # Hono 服务端与多租户鉴权中间件
+│   └── web/                    # React 19 + Vite + Tailwind（6 个预设情境页 + PWA）
+├── scripts/                    # 5 条静态门禁脚本（pnpm run check）
+├── deploy/                     # Dockerfile 与可选 docker-compose.yml
+└── .github/workflows/          # CI（校验与构建）与 CD（GHCR 镜像与 Release）
 ```
 
-## 隐私与安全
+## 数据安全与隔离边界
 
-- 数据按账号四层隔离：登录令牌定身份、数据库查 `user_id`、检索先过滤租户、附件按 `u/{user_id}/` 分目录存放。
-- AI 生成或修改知识卡只出草稿，点保存才正式写入，且每次保存留历史版本。
-- 模型 API Key 由用户自行配置，不随仓库分发，也不要把 `.env` 提交进 Git。
+- **四重多租户隔离**：鉴权中间件注入 `TenantContext` → 数据库 `withTenant()` 与 PostgreSQL RLS 兜底 → 检索前置 `user_id` 过滤 → 对象存储强制校验 `u/{user_id}/...` 路径前缀。
+- **写库人工确认**：Agent 仅生成知识卡草稿投递到受控槽位，用户点击保存才正式落库并保留历史版本。
+- **密钥隔离**：模型 API Key 由各账号自行配置，严禁将 `.env` 或凭据提交至代码仓库。
 
 ## 参与贡献与许可证
 
-欢迎提 Issue 或 Pull Request，动工前先看 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [AGENTS.md](AGENTS.md)。
+欢迎通过 Issue 与 Pull Request 参与共建，提交前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [AGENTS.md](AGENTS.md)。
 
-使用 [MIT License](LICENSE) 开源。
+本项目遵循 [MIT License](LICENSE)。
