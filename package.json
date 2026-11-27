@@ -1,0 +1,44 @@
+{
+  "name": "@zhizhi/root",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @zhizhi/server --filter @zhizhi/web run dev",
+    "dev:server": "pnpm --filter @zhizhi/server run dev",
+    "dev:web": "pnpm --filter @zhizhi/web run dev",
+    "build": "pnpm run build:packages && pnpm --filter @zhizhi/web run build",
+    "build:packages": "tsc -b tsconfig.host.json tsconfig.client.json",
+    "typecheck": "tsc --noEmit -p tsconfig.host.json && tsc --noEmit -p tsconfig.client.json",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
+    "check": "tsx scripts/run-gates.ts",
+    "check:all": "pnpm run typecheck && pnpm run lint && pnpm run check && pnpm run test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "clean": "tsx scripts/clean.ts",
+    "postinstall": "node scripts/install-lefthook.mjs"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "eslint-plugin-sonarjs": "^4.2.0",
+    "lefthook": "^2.2.4",
+    "oxlint": "^1.95.0",
+    "oxlint-tsgolint": "^7.0.2009",
+    "tsdown": "^0.23.7",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
+    "zod": "^4.6.7"
+  }
+}

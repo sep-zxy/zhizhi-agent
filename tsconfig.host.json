@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "packages/shared/*/src/**/*.ts",
+    "packages/shared/*/tests/**/*.ts",
+    "packages/infra/*/src/**/*.ts",
+    "packages/infra/*/tests/**/*.ts",
+    "packages/ingest/*/src/**/*.ts",
+    "packages/ingest/*/tests/**/*.ts",
+    "packages/agent/*/src/**/*.ts",
+    "packages/agent/*/tests/**/*.ts",
+    "apps/server/src/**/*.ts",
+    "apps/server/tests/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": ["**/node_modules/**", "**/lib/**", "**/dist/**"]
+}

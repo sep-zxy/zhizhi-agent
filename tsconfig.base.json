@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "rewriteRelativeImportExtensions": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@zhizhi/brand": ["./packages/shared/brand/src/index.ts"],
+      "@zhizhi/errors": ["./packages/shared/errors/src/index.ts"],
+      "@zhizhi/contracts": ["./packages/shared/contracts/src/index.ts"],
+      "@zhizhi/db": ["./packages/infra/db/src/index.ts"],
+      "@zhizhi/storage": ["./packages/infra/storage/src/index.ts"],
+      "@zhizhi/jobs": ["./packages/infra/jobs/src/index.ts"],
+      "@zhizhi/plugin-sdk": ["./packages/ingest/plugin-sdk/src/index.ts"],
+      "@zhizhi/agent-runtime": ["./packages/agent/runtime/src/index.ts"],
+      "@zhizhi/client-core": ["./packages/client/core/src/index.ts"]
+    }
+  }
+}

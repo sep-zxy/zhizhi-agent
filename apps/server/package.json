@@ -1,0 +1,25 @@
+{
+  "name": "@zhizhi/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.11",
+    "@zhizhi/agent-runtime": "workspace:*",
+    "@zhizhi/brand": "workspace:*",
+    "@zhizhi/contracts": "workspace:*",
+    "@zhizhi/db": "workspace:*",
+    "@zhizhi/errors": "workspace:*",
+    "@zhizhi/jobs": "workspace:*",
+    "@zhizhi/plugin-sdk": "workspace:*",
+    "@zhizhi/storage": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.23",
+    "jose": "^6.2.18",
+    "zod": "^4.6.7"
+  }
+}

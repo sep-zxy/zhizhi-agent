@@ -1,0 +1,1497 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知枝 Web · 完整系统架构设计（v1.2 基座定稿版）</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f4ee;
+  --surface: #fffdf9;
+  --surface-alt: #f0f3ee;
+  --ink: #172922;
+  --dim: #495b53;
+  --muted: #6c7c74;
+  --line: #d4dcd0;
+  --line-strong: #b4c2b2;
+  --teal: #1f5e47;
+  --teal-soft: #e4f0ea;
+  --teal-dark: #14362a;
+  --orange: #9c4f21;
+  --orange-soft: #f9ece2;
+  --blue: #22517a;
+  --blue-soft: #e5eff8;
+  --purple: #5b3d7d;
+  --purple-soft: #f0eaf7;
+  --amber-soft: #fff5e3;
+  --amber-line: #e4bd7d;
+  --amber-ink: #7e4400;
+  --serif: "Noto Serif SC", "Songti SC", "STSong", SimSun, Georgia, serif;
+  --sans: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14.5px/1.68 var(--sans);
+}
+a { color: var(--teal); text-underline-offset: 3px; }
+button { font: inherit; cursor: pointer; }
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+pre {
+  margin: 0;
+  padding: 13px 15px;
+  border-radius: 8px;
+  background: #16231e;
+  color: #e6f0ea;
+  font: 12.6px/1.6 var(--mono);
+  overflow-x: auto;
+  border: 1px solid #263c33;
+}
+pre .k { color: #8fd9b6; }
+pre .s { color: #f6d09c; }
+pre .c { color: #88a095; }
+
+/* Header */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 253, 249, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 10px clamp(14px, 3vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 16.5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.brand-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--teal-dark);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.topbar nav {
+  display: flex;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.topbar nav a {
+  color: var(--dim);
+  text-decoration: none;
+  font-weight: 600;
+}
+.topbar nav a:hover { color: var(--teal); text-decoration: underline; }
+
+main {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 0 clamp(14px, 3vw, 32px) 68px;
+}
+section[id] { scroll-margin-top: 66px; }
+
+/* Hero */
+.hero {
+  margin-top: 18px;
+  background: linear-gradient(135deg, #132c23 0%, #1c4738 60%, #27534a 100%);
+  color: #fffdf6;
+  border-radius: 14px;
+  padding: clamp(22px, 3.5vw, 38px) clamp(20px, 4vw, 40px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr);
+  gap: 20px 28px;
+  align-items: center;
+}
+.hero-tag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #bfe0ca;
+}
+.hero h1 {
+  font: 800 clamp(25px, 3.8vw, 40px)/1.18 var(--serif);
+  margin: 6px 0 10px;
+}
+.hero p {
+  margin: 0;
+  font-size: 14.3px;
+  color: #e4efe7;
+  max-width: 680px;
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.kpi-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  padding: 11px 14px;
+}
+.kpi-card strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+.kpi-card span {
+  font-size: 11.8px;
+  color: #d3e6d9;
+}
+
+/* Section Headers */
+.sec { margin-top: 38px; }
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.sec-head h2 {
+  font: 800 clamp(20px, 2.5vw, 26px)/1.25 var(--serif);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec-num {
+  font: 800 12px/1 var(--sans);
+  background: var(--teal);
+  color: #fff;
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+.sec-sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* Badges */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.55;
+  white-space: nowrap;
+}
+.tag-v1 { background: var(--teal-soft); color: var(--teal); border: 1px solid #b8d4c4; }
+.tag-v15 { background: var(--orange-soft); color: var(--orange); border: 1px solid #e6c6b1; }
+.tag-v2 { background: var(--blue-soft); color: var(--blue); border: 1px solid #bbd1e5; }
+.tag-base { background: var(--purple-soft); color: var(--purple); border: 1px solid #d1c2e4; }
+.tag-amber { background: var(--amber-soft); color: var(--amber-ink); border: 1px solid var(--amber-line); }
+
+/* Panels & SVG */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 15px 17px;
+}
+.panel + .panel { margin-top: 14px; }
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.panel-head strong { font-size: 15px; }
+.btn-outline {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--teal);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.btn-outline:hover { background: var(--teal-soft); }
+.svg-scroll {
+  overflow-x: auto;
+  border: 1px solid #e2e8de;
+  border-radius: 8px;
+  background: #fcfcf8;
+  padding: 8px;
+}
+.svg-scroll svg { display: block; width: 100%; height: auto; }
+.arch-svg { min-width: 980px; }
+.panel-note { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+
+/* Grids & Cards */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.card.top-teal { border-top: 3px solid var(--teal); }
+.card.top-orange { border-top: 3px solid var(--orange); }
+.card.top-blue { border-top: 3px solid var(--blue); }
+.card.top-purple { border-top: 3px solid var(--purple); }
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--teal-dark);
+}
+.card p { margin: 0 0 8px; font-size: 13.2px; color: var(--dim); }
+.card p:last-child { margin-bottom: 0; }
+.clean-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.2px;
+  color: var(--dim);
+}
+.clean-list li { margin-bottom: 5px; }
+.clean-list li:last-child { margin-bottom: 0; }
+.clean-list b { color: var(--ink); }
+
+/* Callout */
+.callout {
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-line);
+  border-left: 4px solid #c57611;
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 13.2px;
+  color: var(--ink);
+  margin-top: 12px;
+}
+.callout strong { color: var(--amber-ink); }
+
+/* Tables */
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+  text-align: left;
+  font-size: 13.2px;
+}
+thead th {
+  background: var(--teal-soft);
+  color: var(--ink);
+  font-weight: 800;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+tbody th {
+  font-weight: 800;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  white-space: nowrap;
+}
+tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  color: var(--dim);
+}
+tbody tr:last-child > * { border-bottom: 0; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.tab-btn {
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tab-btn.active {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* Interactive Canvas Wireframe Mockup */
+.wireframe {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1.35fr) minmax(300px, 0.95fr);
+  gap: 12px;
+  background: #ecefe9;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 12px;
+}
+.wf-col {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wf-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--teal-dark);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 5px;
+}
+.wf-nav-item {
+  font-size: 12.2px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--surface-alt);
+  color: var(--dim);
+}
+.wf-nav-item.active { background: var(--teal-soft); color: var(--teal-dark); font-weight: 700; }
+.wf-card {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: #fafaf6;
+  font-size: 12.2px;
+}
+.wf-card.pinned {
+  border-color: #c57611;
+  background: #fffcf5;
+}
+.wf-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.pin-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--dim);
+}
+.pin-btn.pinned {
+  background: #fff0d6;
+  border-color: #c57611;
+  color: #8c4b00;
+}
+.wf-msg {
+  font-size: 12.2px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: var(--surface-alt);
+}
+.wf-msg.user { background: var(--teal-soft); color: var(--teal-dark); align-self: flex-end; }
+.wf-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+.sw-chip {
+  font-size: 11.2px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--muted);
+}
+.sw-chip.on {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+.tool-preview {
+  font-size: 11.8px;
+  font-family: var(--mono);
+  background: #16231e;
+  color: #bfe0ca;
+  padding: 7px 9px;
+  border-radius: 6px;
+}
+
+/* Modal */
+dialog {
+  width: min(96vw, 1440px);
+  max-height: 92vh;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--surface);
+}
+dialog::backdrop { background: rgba(16, 32, 26, 0.62); }
+.dialog-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.dialog-body { overflow: auto; }
+.dialog-body svg { min-width: 1120px; width: 100%; height: auto; display: block; }
+
+footer {
+  margin-top: 42px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 960px) {
+  .hero, .grid-2, .grid-3, .grid-4, .wireframe { grid-template-columns: 1fr; }
+}
+@media print {
+  .topbar, .btn-outline, dialog { display: none !important; }
+  body { background: #fff; }
+  .hero { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .hero p, .kpi-card span, .hero-tag { color: var(--dim); }
+  .kpi-card { border-color: var(--line); }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar" id="top">
+  <div class="topbar-inner">
+    <a class="brand" href="#top">知枝 Web <span class="brand-pill">系统架构设计 v1.2</span></a>
+    <nav aria-label="架构导航">
+      <a href="#adr">核心决策</a>
+      <a href="#topology">全景分层架构</a>
+      <a href="#ingestion">插槽与中间层</a>
+      <a href="#agent">主从循环与工具</a>
+      <a href="#canvas">动态画布与记忆</a>
+      <a href="#data">数据与隔离模型</a>
+      <a href="#deploy">部署、演进与边界</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div>
+      <div class="hero-tag">ZHIZHI WEB · SYSTEM ARCHITECTURE SPECIFICATION v1.2 · 2026-11-27 工程基座定稿</div>
+      <h1>知枝 Web · 完整系统架构设计</h1>
+      <p>
+        基于团队完整会议共识、<strong>DeepSeek Harness 工程门禁规范</strong>与 <strong>Pi Agent（<code>@earendil-works/pi-agent-core</code> + <code>pi-ai</code>）全栈 TypeScript Monorepo</strong> 底座构建：
+        多人原生隔离（PGlite 零 Docker 本地直跑 / PostgreSQL 生产无缝切换）、去 Redis 持久化异步队列、插槽式来源采集（内置 Slot + 外部 MCP）、双循环解耦、预设情境多页 + 零 DOM 客户端层（兼容未来移动端）、强绑定 1:N 题库、解耦独立错题页与地图驱动知识雷达。
+      </p>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><strong>5 层 · TS 全栈</strong><span>对标 DSH 规范 · Pi Agent 内核</span></div>
+      <div class="kpi-card"><strong>零 Docker 可跑</strong><span>PGlite / PG 双驱动 · 去 Redis</span></div>
+      <div class="kpi-card"><strong>10 大 ADR</strong><span>产品 + 工程基座决策</span></div>
+      <div class="kpi-card"><strong>5 条静态门禁</strong><span>已落地且 100% 跑绿</span></div>
+    </div>
+  </section>
+
+  <!-- 1. 架构设计原则与核心 ADR -->
+  <section class="sec" id="adr">
+    <div class="sec-head">
+      <h2><span class="sec-num">01</span>架构设计原则与核心 ADR（会议拍板转译）</h2>
+      <p class="sec-sub">将会议讨论的每一条业务结论，固化为不可违背的架构决策记录（Architecture Decision Records）</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" style="width:74px">编号</th>
+            <th scope="col" style="width:185px">架构决策</th>
+            <th scope="col">核心方案与硬性约束</th>
+            <th scope="col" style="width:28%">规避的工程风险</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ADR-01</code></td>
+            <th>V1 原生多人隔离<br><span class="tag tag-base">账号基座</span></th>
+            <td>所有关系表、全文索引、向量索引、OSS 对象键与内存会话全部强制以 <code>user_id</code> 为一级租户键；V1 直接交付登录鉴权与租户上下文中间件。本地单人部署复用同一架构，仅默认初始化单账号。</td>
+            <td>彻底避免“先做单人再迁多人”导致的表结构重写、索引重构与越权漏洞。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-02</code></td>
+            <th>插槽式来源插件<br><span class="tag tag-v1">可拆卸</span></th>
+            <td>所有知识来源封装为实现统一 <code>SourcePlugin</code> 协议的可拆卸插槽（支持进程内插件与外部 MCP Server 两种挂载模式）。卸载任一插件（如抖音/B站）不影响系统主干运行。</td>
+            <td>隔离高维护成本站点（强反爬）变更，支持直接二开开源解析器并独立热替换。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-03</code></td>
+            <th>统一 MD 中间层 + AI 子循环<br><span class="tag tag-amber">核心解耦</span></th>
+            <td>任何原始资料（PDF/HTML/视频/Git Commit）禁止直入 Agent 主循环；先在独立异步的<strong>解析子循环</strong>中完成表格重排、图片提取上传 OSS、Git 架构总结，经 <code>StandardMarkdownSchema</code> 校验后落地。</td>
+            <td>防止巨量噪声/破损格式撑爆主循环上下文、拉低对话与制卡输出质量。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-04</code></td>
+            <th>Git 剥离代码，保留架构抽象<br><span class="tag tag-amber">内容规范</span></th>
+            <td>跨端 Git 采集器（Win/Mac）及解析子循环将多条 Commit 去噪归并，仅保留「背景问题 → 架构决策 → 权衡方案」的抽象 Markdown，不保留原仓库代码快照、不强绑定原仓库；出题需代码时由 AI 现编独立伪代码。</td>
+            <td>避免知识卡依赖易失仓库路径、陷入局部语法细节，保证知识点公共性与复用度。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-05</code></td>
+            <th>单一问答入口 + 工具动态裁剪<br><span class="tag tag-v1">Agent 编排</span></th>
+            <td>合并日常问答与查库为唯一问答页入口。主循环默认挂载「查个人知识库 + 联网搜索兜底」工具；「生成知识卡」与「各类题型（V1 选择题，V1.5 判断/填空/问答/伪代码）」均封装为独立 Tool，由前端开关在每次请求时<strong>动态过滤下发给 LLM 的 Tools 白名单</strong>。</td>
+            <td>替代不可靠的纯自然语言意图识别，实现“关掉就不可能误调”的确定性控制，且支持随时插入新题型。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-06</code></td>
+            <th>预设情境多页 + 页内有限调整<br><span class="tag tag-amber">受控动态 UI</span></th>
+            <td>按功能类别划分为<strong>问答、搜索、知识来源、Wiki、知识地图、独立错题</strong>等独立页面，每页预设固定情境骨架；仅允许用户与 Agent 在页内卡片槽做有限调整（投放白名单预设卡片 + 右上角「钉住」防覆写）；状态按 <code>user_id × page_scene</code> 持久化记忆。</td>
+            <td>既保留 Agent 操控页面的灵动体验，又大幅收敛前端复杂度，避免单画布承载过多情境导致失控。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-07</code></td>
+            <th>强绑定 1:N 题库 + 入库双题 + 判重<br><span class="tag tag-amber">后半程定稿</span></th>
+            <td>拆出独立 <code>card_questions</code> 表强绑定 <code>card_id</code>（支持 1:N 多题挂靠）。新卡保存立即返回，后台异步默认生成<strong>2 道选择题</strong>（① 认知理解 + ② 情境应用预测，可设开关）；多文档补卡或更新时，将 Diff 与已有题摘要送入覆盖度判断，仅对未覆盖点增量补题；复习优先抽未做/错题并允许追加新题。</td>
+            <td>避免保存接口阻塞与重复出同质化题目，同时让同一知识卡持续沉淀多文档、多轮复习题池。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-08</code></td>
+            <th>独立错题页解耦 + 地图驱动雷达<br><span class="tag tag-amber">后半程定稿</span></th>
+            <td>错题设立独立页面，与知识库入库流程完全解耦，仅作客观练题记录并支持<strong>归档与删除</strong>防积压；<strong>知识雷达显式依赖知识地图</strong>，基于图谱拓扑与节点掌握/错题状态识别缺口并推荐下一张待学知识卡。</td>
+            <td>防止错题逻辑耦合入库事务或无限积压失效；让雷达推荐建立在可解释的知识地图结构之上。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-09</code></td>
+            <th>全栈 TS + Pi Agent 内核 + DSH 门禁<br><span class="tag tag-v1">基座定稿</span></th>
+            <td>参考 DeepSeek Harness 工程规范自建 pnpm Monorepo（非强绑 DSH alpha 内核）；后端与 Agent 主/子循环统一接入 <code>@earendil-works/pi-agent-core</code> + <code>@earendil-works/pi-ai</code>（无密钥自动走官方 <code>fauxProvider</code> 跑真循环）；全仓启用双编译面、Branded ID、<code>oxlint</code> type-aware 与 5 条静态门禁；Python 开源解析器通过独立 MCP 插槽接入。</td>
+            <td>前后端 100% 共享 Zod 契约与类型，4 人并行 + AI 辅助写代码不漂移，同时保留外部 Python 生态扩展力。</td>
+          </tr>
+          <tr>
+            <td><code>ADR-10</code></td>
+            <th>零 Docker 双驱动 + 零 DOM 移动就绪<br><span class="tag tag-v1">基座定稿</span></th>
+            <td>数据库统一 Drizzle ORM PostgreSQL 语法：本地零 Docker 默认嵌入式 <code>PGlite</code> 落盘，填 <code>DATABASE_URL</code> 无缝切标准 PG；对象存储 <code>LocalFs / S3</code> 双驱动；异步队列直接基于 <code>async_jobs</code> 表实现（V1 去掉 Redis 强制依赖）。前端拆出零 DOM 的 <code>@zhizhi/client-core</code>，React Web 预配 PWA 与移动底栏，为 Capacitor / RN 铺路。</td>
+            <td>不绑死 Docker、拉下代码 5 秒可跑、裸机与容器部署一套代码零分叉，后续做手机端零逻辑重写。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2. 全景分层架构图 -->
+  <section class="sec" id="topology">
+    <div class="sec-head">
+      <h2><span class="sec-num">02</span>系统全景分层架构图</h2>
+      <p class="sec-sub">自上而下分为「展示与骨架层 → 网关与租户隔离层 → Agent 主循环编排层 → 插件与解析子循环层 → 存储与外部能力层」</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <strong>知枝 Web 5 层总体架构蓝图（横向贯穿 user_id 租户上下文）</strong>
+        <button type="button" class="btn-outline" id="btn-zoom-arch">全屏放大架构图</button>
+      </div>
+      <div class="svg-scroll" id="arch-slot">
+        <svg class="arch-svg" viewBox="0 0 1160 640" role="img" aria-label="知枝 Web 5 层系统架构图">
+          <defs>
+            <marker id="arr-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#1f5e47"/>
+            </marker>
+            <marker id="arr-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#9c4f21"/>
+            </marker>
+          </defs>
+
+          <!-- Vertical Tenant Strip on Far Left -->
+          <rect x="10" y="14" width="38" height="612" rx="8" fill="#5b3d7d"/>
+          <text x="29" y="320" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" transform="rotate(-90 29 320)">全域多租户隔离（JWT → user_id 强校验 · 兼容本地单账号）</text>
+
+          <!-- Layer 1: Client & Skeleton UI -->
+          <rect x="60" y="14" width="1088" height="106" rx="10" fill="#eef6f1" stroke="#b8d4c4"/>
+          <text x="76" y="36" font-size="13" font-weight="800" fill="#14362a">L1 · React 多页预设情境层 + @zhizhi/client-core 零 DOM 逻辑层（PWA 移动底栏 · 兼容 Capacitor/RN）</text>
+
+          <rect x="76" y="48" width="248" height="58" rx="7" fill="#fff5e3" stroke="#c57611"/>
+          <text x="88" y="70" font-size="12.4" font-weight="800" fill="#7e4400">问答页（对话 + 页内受控卡片槽）</text>
+          <text x="88" y="89" font-size="10.8" fill="#6b4530">技能/题型开关 · 预设卡投放 · 钉住</text>
+
+          <rect x="336" y="48" width="268" height="58" rx="7" fill="#fff" stroke="#1f5e47"/>
+          <text x="348" y="70" font-size="12.4" font-weight="800" fill="#172922">知识来源页 · 搜索页 · LLM Wiki 页</text>
+          <text x="348" y="89" font-size="10.8" fill="#495b53">预设各自固定情境 · 有限调整布局</text>
+
+          <rect x="616" y="48" width="250" height="58" rx="7" fill="#fff5e3" stroke="#c57611"/>
+          <text x="628" y="70" font-size="12.4" font-weight="800" fill="#7e4400">知识地图/雷达页 · 独立错题页</text>
+          <text x="628" y="89" font-size="10.8" fill="#6b4530">地图驱雷达 · 错题解耦入库+归档删除</text>
+
+          <rect x="878" y="48" width="256" height="58" rx="7" fill="#eef4fa" stroke="#22517a"/>
+          <text x="890" y="70" font-size="12.4" font-weight="800" fill="#22517a">跨端 Git 采集客户端（Win / Mac）</text>
+          <text x="890" y="89" font-size="10.8" fill="#495b53">定期只读扫描 · 架构总结 → Standard MD</text>
+
+          <!-- Arrows L1 -> L2 -->
+          <line x1="350" y1="120" x2="350" y2="144" stroke="#1f5e47" stroke-width="2" marker-end="url(#arr-g)"/>
+          <line x1="740" y1="120" x2="740" y2="144" stroke="#1f5e47" stroke-width="2" marker-end="url(#arr-g)"/>
+          <line x1="1006" y1="120" x2="1006" y2="144" stroke="#1f5e47" stroke-width="2" marker-end="url(#arr-g)"/>
+
+          <!-- Layer 2: API Gateway & Auth -->
+          <rect x="60" y="148" width="1088" height="64" rx="10" fill="#f0eaf7" stroke="#c8b6de"/>
+          <text x="76" y="170" font-size="13" font-weight="800" fill="#5b3d7d">L2 · Hono 统一接入、鉴权与双通道 SSE 协议层（apps/server · Zod 边界强校验）</text>
+          <text x="76" y="195" font-size="11.5" fill="#495b53">JWT / PAT 鉴权中间件 · 租户上下文注入（TenantContext.userId） · 统一 ZhizhiError · 双通道 SSE（text_delta / tool_* / canvas_op / done）</text>
+
+          <!-- Arrows L2 -> L3 -->
+          <line x1="340" y1="212" x2="340" y2="236" stroke="#1f5e47" stroke-width="2" marker-end="url(#arr-g)"/>
+          <line x1="880" y1="212" x2="880" y2="236" stroke="#9c4f21" stroke-width="2" marker-end="url(#arr-o)"/>
+
+          <!-- Layer 3: Dual Loop Core (Left = Main Agent Loop, Right = Ingestion Sub-Loop) -->
+          <!-- Left Box: Main Agent Loop & Domain Services -->
+          <rect x="60" y="240" width="664" height="222" rx="10" fill="#14362a"/>
+          <text x="78" y="264" font-size="13.5" font-weight="800" fill="#bfe0ca">L3-A · Agent 主循环与核心业务域（只消费干净的 Standard MD 与知识卡）</text>
+
+          <rect x="76" y="278" width="308" height="84" rx="7" fill="#fffdf9"/>
+          <text x="88" y="299" font-size="12.6" font-weight="800" fill="#172922">Pi Agent Core 主循环（@zhizhi/agent-runtime）</text>
+          <text x="88" y="317" font-size="11" fill="#495b53">• 开关动态编译 Pi AgentTool[] 白名单</text>
+          <text x="88" y="334" font-size="11" fill="#495b53">• beforeToolCall 二次硬拦 Pin 与关闭工具</text>
+          <text x="88" y="351" font-size="11" fill="#1f5e47">• finishTurn 步数上限 + pi-ai faux 零费测试</text>
+
+          <rect x="398" y="278" width="310" height="84" rx="7" fill="#e4f0ea"/>
+          <text x="410" y="299" font-size="12.6" font-weight="800" fill="#14362a">统一 Tool Registry（可插拔工具箱）</text>
+          <text x="410" y="317" font-size="11" fill="#495b53">• 检索类：kb_search / web_search</text>
+          <text x="410" y="334" font-size="11" fill="#495b53">• 制卡类（受技能开关控）：draft_wiki_card</text>
+          <text x="410" y="351" font-size="11" fill="#495b53">• 出题类（受开关控）：mcq(V1) / tf / blank / qa</text>
+
+          <rect x="76" y="374" width="200" height="74" rx="7" fill="#234d3d" stroke="#5b8d77"/>
+          <text x="88" y="395" font-size="12.4" font-weight="800" fill="#fff">LLM Wiki 域服务</text>
+          <text x="88" y="414" font-size="10.8" fill="#d0e8da">知识卡/版本 → 触发异步出题事件</text>
+          <text x="88" y="431" font-size="10.8" fill="#d0e8da">查重 · Index/Log · 巡检</text>
+
+          <rect x="288" y="374" width="206" height="74" rx="7" fill="#234d3d" stroke="#5b8d77"/>
+          <text x="300" y="395" font-size="12.4" font-weight="800" fill="#fff">题库(1:N) · 错题 · 地图雷达</text>
+          <text x="300" y="414" font-size="10.8" fill="#d0e8da">入库2题/改卡判重 · 错题归档删除</text>
+          <text x="300" y="431" font-size="10.8" fill="#d0e8da">知识地图 ──▶ 知识雷达推卡</text>
+
+          <rect x="506" y="374" width="202" height="74" rx="7" fill="#2c443b" stroke="#e4bd7d"/>
+          <text x="518" y="395" font-size="12.4" font-weight="800" fill="#f7cfa2">情境页指令 &amp; 记忆服务</text>
+          <text x="518" y="414" font-size="10.8" fill="#e4efe7">page_scene 预设骨架 + 有限槽</text>
+          <text x="518" y="431" font-size="10.8" fill="#e4efe7">Pin 保护 · 页内状态/习惯记忆</text>
+
+          <!-- Right Box: Ingestion Plugin Slot + AI Sub-Loop -->
+          <rect x="742" y="240" width="406" height="222" rx="10" fill="#fffcf5" stroke="#c57611" stroke-width="1.5"/>
+          <text x="758" y="264" font-size="13.5" font-weight="800" fill="#8c4b00">L3-B · 插槽来源层与 AI 解析子循环（异步解耦）</text>
+
+          <rect x="758" y="278" width="374" height="58" rx="7" fill="#fff" stroke="#c57611"/>
+          <text x="770" y="299" font-size="12.3" font-weight="800" fill="#172922">插槽式来源插件管理（内置 Slot / 外部 MCP）</text>
+          <text x="770" y="318" font-size="10.8" fill="#495b53">[网页槽] [B站/YT/抖音视频槽] [HTML/PDF/MD 槽] [Git 槽]</text>
+
+          <rect x="758" y="346" width="374" height="52" rx="7" fill="#fdf3ec" stroke="#9c4f21"/>
+          <text x="770" y="367" font-size="12.3" font-weight="800" fill="#9c4f21">异步 AI Worker（解析子循环 + 入库/改卡出题队列）</text>
+          <text x="770" y="385" font-size="10.8" fill="#6b4530">表格/图片OSS/Git总结 ｜ 新卡默认2选择 · 补卡判重补题</text>
+
+          <rect x="758" y="406" width="374" height="42" rx="7" fill="#e4f0ea" stroke="#1f5e47"/>
+          <text x="945" y="425" text-anchor="middle" font-size="12" font-weight="800" fill="#14362a">统一 Markdown 中间层 + Schema 校验</text>
+          <text x="945" y="441" text-anchor="middle" font-size="10.5" fill="#495b53">产出 Standard MD → 三出口（资料箱 / 待学 / 预览存卡）</text>
+
+          <!-- Cross arrow from L3-B Standard MD to L3-A -->
+          <path d="M 758 427 L 728 427" fill="none" stroke="#1f5e47" stroke-width="2.4" marker-end="url(#arr-g)"/>
+
+          <!-- Arrows L3 -> L4 -->
+          <line x1="250" y1="462" x2="250" y2="494" stroke="#1f5e47" stroke-width="2" marker-end="url(#arr-g)"/>
+          <line x1="590" y1="462" x2="590" y2="494" stroke="#1f5e47" stroke-width="2" marker-end="url(#arr-g)"/>
+          <line x1="945" y1="462" x2="945" y2="494" stroke="#9c4f21" stroke-width="2" marker-end="url(#arr-o)"/>
+
+          <!-- Layer 4: Storage & Model Router -->
+          <rect x="60" y="498" width="1088" height="128" rx="10" fill="#f1f5f1" stroke="#b4c2b2"/>
+          <text x="76" y="520" font-size="13" font-weight="800" fill="#172922">L4 &amp; L5 · 多租户存储基础设施、异步任务队列与模型/搜索路由层</text>
+
+          <rect x="76" y="534" width="212" height="78" rx="7" fill="#fff" stroke="#1f5e47"/>
+          <text x="88" y="555" font-size="12.3" font-weight="800" fill="#172922">Drizzle ORM（PGlite / PG 双驱动）</text>
+          <text x="88" y="573" font-size="10.7" fill="#495b53">本地零 Docker 嵌入式 PGlite 落盘</text>
+          <text x="88" y="590" font-size="10.7" fill="#495b53">填 DATABASE_URL 无缝切标准 PG</text>
+          <text x="88" y="605" font-size="10.3" fill="#5b3d7d">withTenant() + RLS 双重隔离</text>
+
+          <rect x="300" y="534" width="198" height="78" rx="7" fill="#fff" stroke="#1f5e47"/>
+          <text x="312" y="555" font-size="12.3" font-weight="800" fill="#172922">StorageSeam（LocalFs / S3）</text>
+          <text x="312" y="573" font-size="10.7" fill="#495b53">本地零配置目录 / 生产 OSS·MinIO</text>
+          <text x="312" y="590" font-size="10.7" fill="#495b53">原件只读 · 截帧 · MD 内嵌图</text>
+          <text x="312" y="605" font-size="10.3" fill="#5b3d7d">强校验前缀 u/{user_id}/...</text>
+
+          <rect x="510" y="534" width="196" height="78" rx="7" fill="#fff" stroke="#1f5e47"/>
+          <text x="522" y="555" font-size="12.3" font-weight="800" fill="#172922">DbJobQueue（V1 去 Redis）</text>
+          <text x="522" y="573" font-size="10.7" fill="#495b53">基于 async_jobs 表持久化调度</text>
+          <text x="522" y="590" font-size="10.7" fill="#495b53">防重键 · 进度上报 · 失败重试</text>
+          <text x="522" y="605" font-size="10.3" fill="#1f5e47">零中间件依赖 · 重启不丢任务</text>
+
+          <rect x="718" y="534" width="212" height="78" rx="7" fill="#fff" stroke="#22517a"/>
+          <text x="730" y="555" font-size="12.3" font-weight="800" fill="#22517a">Pi AI 多模型路由（@earendil-works/pi-ai）</text>
+          <text x="730" y="573" font-size="10.7" fill="#495b53">DeepSeek / OpenAI / 任意兼容中转</text>
+          <text x="730" y="590" font-size="10.7" fill="#495b53">主循环 / 子循环 / 出题分路配置</text>
+          <text x="730" y="605" font-size="10.3" fill="#495b53">无 Key 自动切 fauxProvider 测真循环</text>
+
+          <rect x="942" y="534" width="192" height="78" rx="7" fill="#fff" stroke="#9c4f21"/>
+          <text x="954" y="555" font-size="12.3" font-weight="800" fill="#9c4f21">外部 MCP 插件与能力</text>
+          <text x="954" y="573" font-size="10.7" fill="#495b53">联网搜索 API（Tavily/SearXNG）</text>
+          <text x="954" y="590" font-size="10.7" fill="#495b53">Python(uv) MCP 解析/截帧插件</text>
+          <text x="954" y="605" font-size="10.3" fill="#495b53">V1.5：ASR / OCR 插件槽</text>
+        </svg>
+      </div>
+      <p class="panel-note">架构要点：L3-B（解析子循环）与 L3-A（Agent 主循环）在运行期完全解耦，中间仅通过「Standard Markdown 契约」交接，避免重度解析阻塞或污染对话主循环。</p>
+    </div>
+  </section>
+
+  <!-- 3. 插槽式知识来源与统一 Markdown 中间层 -->
+  <section class="sec" id="ingestion">
+    <div class="sec-head">
+      <h2><span class="sec-num">03</span>插槽式知识来源与统一 Markdown 中间层设计</h2>
+      <p class="sec-sub">可拆卸来源插件（Slot / MCP 双适配）+ AI 解析子循环 + 运行时 Schema 校验</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card top-teal">
+        <h3>插槽式插件架构（内置 Slot + 外部 MCP 统一抽象） <span class="tag tag-v1">可热拆卸</span></h3>
+        <p>所有来源不直接硬编码在业务代码里，而是向 <code>SourcePluginRegistry</code> 注册。针对高变更站点（如 B 站、抖音、小红书）或开源文档解析器，支持两种零侵入挂载：</p>
+        <ul class="clean-list">
+          <li><b>内置进程插件（In-Process Slot）：</b>适用于稳定轻量解析（Markdown、HTML、纯文本 PDF、Git 总结接收端），直接实现 <code>IngestAdapter</code> 接口。</li>
+          <li><b>外部 MCP / 微服务插件（Out-of-Process MCP）：</b>适用于强反爬视频抓取、复杂 PDF 版面解析（如二开 MinerU / Docling 等开源项目）、V1.5 ASR/OCR。通过标准 MCP Tool 协议启动/动态发现，挂掉或移除后自动降级提示，绝不拖垮主服务。</li>
+          <li><b>热插拔容错：</b>注册表维护每个插件的健康状态与能力声明（<code>supported_mime</code> / <code>url_patterns</code>）；当某插件被禁用或卸载时，对应来源入口自动灰显并给出“手动粘贴正文”兜底。</li>
+        </ul>
+      </div>
+
+      <div class="card top-orange">
+        <h3>AI 解析子循环（Sub-Loop）与 Git 架构抽象流水线 <span class="tag tag-amber">主从隔离</span></h3>
+        <p>复杂原料在进入主循环前，先由后台 Worker 驱动<strong>专用解析子循环</strong>（可选性价比更高的轻模型）执行 4 步提纯：</p>
+        <ul class="clean-list">
+          <li><b>Step 1 原始提取：</b>插件产出原始文本块、原始表格片段、原始图片/关键帧二进制流或原始 Commit Diff。</li>
+          <li><b>Step 2 媒体托管：</b>所有图片统一上传对象存储，生成租户隔离路径 <code>oss://u/{user_id}/assets/{sha256}.webp</code>（本地单人可映射为 <code>/assets/{user_id}/...</code> 相对路径），MD 中仅存规范引用。</li>
+          <li><b>Step 3 AI 子循环结构化：</b>PDF 跨页表格重排为标准 GFM 表格；图文/视频按要点分节并标注时间戳锚点；<strong>Git 提交执行去噪归并 + 架构抽象总结</strong>（彻底剥离原始代码片段，只保留动机、方案与架构权衡）。</li>
+          <li><b>Step 4 运行时 Schema 校验：</b>通过 Zod / Pydantic 校验 Frontmatter 必填项与正文章节结构，合格后写入 <code>raw_sources</code> 并放行至统一三出口。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head">
+        <strong>统一中间层契约：Standard Markdown Schema（所有来源的唯一合法出口格式）</strong>
+        <span class="tag tag-v1">Runtime Validated</span>
+      </div>
+      <div class="grid-2">
+        <pre><span class="c"># Standard Markdown Frontmatter (YAML + 运行时 Schema 校验)</span>
+---
+<span class="k">schema_version</span>: <span class="s">"1.0"</span>
+<span class="k">source_id</span>: <span class="s">"src_01J..."</span>
+<span class="k">user_id</span>: <span class="s">"usr_01H..."</span>
+<span class="k">plugin_id</span>: <span class="s">"git-collector-v1"</span>  <span class="c"># web | video-bili | pdf-parser | git | chat</span>
+<span class="k">source_type</span>: <span class="s">"git_summary"</span>     <span class="c"># 明确标记来源类型</span>
+<span class="k">title</span>: <span class="s">"异步解析子循环解耦与幂等防重设计"</span>
+<span class="k">origin_ref</span>:
+  <span class="k">kind</span>: <span class="s">"git_commit_group"</span>
+  <span class="k">repo_label</span>: <span class="s">"zhizhi-backend (只读摘要，不绑原仓)"</span>
+  <span class="k">anchors</span>: [<span class="s">"commit:a1b2c3..d4e5f6"</span>]
+<span class="k">assets</span>:
+  - { <span class="k">id</span>: <span class="s">"img_1"</span>, <span class="k">url</span>: <span class="s">"asset://u/usr_01H/sha256_xxx.webp"</span>, <span class="k">caption</span>: <span class="s">"状态机流转图"</span> }
+<span class="k">parse_trace</span>: { <span class="k">sub_loop_model</span>: <span class="s">"deepseek-chat"</span>, <span class="k">tokens</span>: 1420 }
+---
+
+## 1. 核心背景与问题
+...（纯架构层抽象，不含具体易失代码片段）
+
+## 2. 关键要点与决策权衡
+| 维度 | 方案 A | 方案 B | 最终取舍 |
+| --- | --- | --- | --- |
+
+## 3. 可沉淀知识点候选（供三出口消费）
+- 知识点 1：...
+- 知识点 2：...</pre>
+
+        <pre><span class="c">// 统一来源插件协议 (TypeScript / Python 同构接口)</span>
+<span class="k">interface</span> SourcePlugin {
+  <span class="k">readonly</span> pluginId: string;        <span class="c">// 如 "video-bilibili"</span>
+  <span class="k">readonly</span> mode: <span class="s">"in_process"</span> | <span class="s">"mcp"</span>;
+  <span class="k">readonly</span> capabilities: {
+    mimeTypes?: string[];
+    urlPatterns?: string[];
+    needsSubLoop: boolean;
+  };
+
+  <span class="c">// 1. 预检体量（用于大任务成本提示与防重）</span>
+  preflight(input: RawInput, ctx: TenantCtx): Promise&lt;PreflightEstimate&gt;;
+
+  <span class="c">// 2. 提取原始块与附件（不含主循环业务逻辑）</span>
+  extract(input: RawInput, ctx: TenantCtx): Promise&lt;RawExtractedBundle&gt;;
+}
+
+<span class="c">// 跨端 Git 采集器 (Win / Mac) 推数契约</span>
+POST /api/v1/ingest/git-summary
+Authorization: Bearer &lt;user_collector_pat&gt;
+{
+  <span class="s">"repo_label"</span>: <span class="s">"my-project"</span>,
+  <span class="s">"commit_range"</span>: <span class="s">"abc123..def456"</span>,
+  <span class="s">"raw_commit_messages"</span>: [...],
+  <span class="s">"arch_summary_md"</span>: <span class="s">"采集器本地/云端生成的架构抽象总结..."</span>
+  <span class="c">// 严禁携带大段业务源码，保证知识卡公共性</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Agent 主循环、动态工具编排与出题机制 -->
+  <section class="sec" id="agent">
+    <div class="sec-head">
+      <h2><span class="sec-num">04</span>Agent 主循环、检索路由与工具化出题架构</h2>
+      <p class="sec-sub">统一对话入口背后的运行时控制面：开关决定工具白名单，工具驱动查库、联网、制卡、出题与画布渲染</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><strong>主循环单轮执行时序（Request → Tool Filtering → Autonomous RAG/Web → Canvas Dispatch）</strong></div>
+      <div class="svg-scroll">
+        <svg class="arch-svg" viewBox="0 0 1120 264" role="img" aria-label="Agent 主循环执行时序图">
+          <defs>
+            <marker id="ar2-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#1f5e47"/>
+            </marker>
+            <marker id="ar2-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#9c4f21"/>
+            </marker>
+          </defs>
+
+          <!-- Step 1 -->
+          <rect x="12" y="24" width="186" height="190" rx="8" fill="#eef6f1" stroke="#1f5e47"/>
+          <text x="105" y="47" text-anchor="middle" font-size="12.5" font-weight="800" fill="#14362a">1. 上下文装配</text>
+          <text x="24" y="72" font-size="11" fill="#495b53">• user_id 租户上下文</text>
+          <text x="24" y="92" font-size="11" fill="#495b53">• 读取用户交互习惯记忆</text>
+          <text x="24" y="112" font-size="11" fill="#495b53">• 读取画布当前卡片与</text>
+          <text x="32" y="128" font-size="11" fill="#8c4b00" font-weight="700">Pinned(钉住) 保护清单</text>
+          <text x="24" y="150" font-size="11" fill="#495b53">• 读取本次 UI 开关状态：</text>
+          <text x="32" y="168" font-size="10.8" fill="#1f5e47">skill_gen_card: on/off</text>
+          <text x="32" y="185" font-size="10.8" fill="#1f5e47">quiz_types: ["mcq"]</text>
+
+          <line x1="198" y1="119" x2="230" y2="119" stroke="#1f5e47" stroke-width="2" marker-end="url(#ar2-g)"/>
+
+          <!-- Step 2 -->
+          <rect x="234" y="24" width="204" height="190" rx="8" fill="#fff5e3" stroke="#c57611"/>
+          <text x="336" y="47" text-anchor="middle" font-size="12.5" font-weight="800" fill="#7e4400">2. 动态工具集裁剪</text>
+          <text x="246" y="72" font-size="11" fill="#495b53">始终注入（常驻核心）：</text>
+          <text x="252" y="90" font-size="10.8" fill="#172922">✓ kb_search（查本库）</text>
+          <text x="252" y="107" font-size="10.8" fill="#172922">✓ web_search（联网兜底）</text>
+          <text x="252" y="124" font-size="10.8" fill="#172922">✓ canvas_render（画布投放）</text>
+          <text x="246" y="147" font-size="11" fill="#8c4b00" font-weight="700">按开关动态注入/剥离：</text>
+          <text x="252" y="165" font-size="10.8" fill="#495b53">? draft_wiki_card（制卡开）</text>
+          <text x="252" y="182" font-size="10.8" fill="#495b53">? quiz_mcq（选择题开）</text>
+          <text x="252" y="199" font-size="10.8" fill="#9c4f21">✗ quiz_qa / quiz_blank（关）</text>
+
+          <line x1="438" y1="119" x2="470" y2="119" stroke="#1f5e47" stroke-width="2" marker-end="url(#ar2-g)"/>
+
+          <!-- Step 3 -->
+          <rect x="474" y="24" width="218" height="190" rx="8" fill="#14362a"/>
+          <text x="583" y="47" text-anchor="middle" font-size="12.5" font-weight="800" fill="#bfe0ca">3. Agent ReAct 主循环</text>
+          <rect x="488" y="60" width="190" height="44" rx="5" fill="#fffdf9"/>
+          <text x="498" y="78" font-size="11.2" font-weight="700" fill="#172922">自主判断检索路径</text>
+          <text x="498" y="95" font-size="10.4" fill="#495b53">优先 kb_search → 未命中调 web_search</text>
+
+          <rect x="488" y="114" width="190" height="44" rx="5" fill="#e4f0ea"/>
+          <text x="498" y="132" font-size="11.2" font-weight="700" fill="#14362a">按需调用技能 / 题型工具</text>
+          <text x="498" y="149" font-size="10.4" fill="#495b53">制卡先查重出草稿 · 出题仅调开启工具</text>
+
+          <rect x="488" y="168" width="190" height="36" rx="5" fill="#234d3d" stroke="#5b8d77"/>
+          <text x="583" y="190" text-anchor="middle" font-size="10.8" fill="#f7cfa2">最大步数保护（Max Steps = 6）</text>
+
+          <line x1="692" y1="119" x2="724" y2="119" stroke="#1f5e47" stroke-width="2" marker-end="url(#ar2-g)"/>
+
+          <!-- Step 4 -->
+          <rect x="728" y="24" width="182" height="190" rx="8" fill="#eef6f1" stroke="#1f5e47"/>
+          <text x="819" y="47" text-anchor="middle" font-size="12.5" font-weight="800" fill="#14362a">4. 双通道 SSE 下发</text>
+          <text x="740" y="74" font-size="11" fill="#172922" font-weight="700">通道 A · 对话流文本</text>
+          <text x="740" y="92" font-size="10.6" fill="#495b53">流式回答 + 引用出处徽章</text>
+          <text x="740" y="110" font-size="10.6" fill="#495b53">（本库卡链接 / 联网外链）</text>
+          <text x="740" y="140" font-size="11" fill="#8c4b00" font-weight="700">通道 B · 画布指令流</text>
+          <text x="740" y="158" font-size="10.6" fill="#495b53">canvas_op 增量指令：</text>
+          <text x="740" y="176" font-size="10.6" fill="#495b53">向未钉住插槽投放预设卡</text>
+          <text x="740" y="194" font-size="10.6" fill="#9c4f21">（钉住插槽被后端/前端双拦截）</text>
+
+          <line x1="910" y1="119" x2="942" y2="119" stroke="#9c4f21" stroke-width="2" marker-end="url(#ar2-o)"/>
+
+          <!-- Step 5 -->
+          <rect x="946" y="24" width="162" height="190" rx="8" fill="#fdf3ec" stroke="#9c4f21"/>
+          <text x="1027" y="47" text-anchor="middle" font-size="12.5" font-weight="800" fill="#9c4f21">5. 状态与记忆落盘</text>
+          <text x="958" y="76" font-size="10.8" fill="#6b4530">• 持久化本轮消息与</text>
+          <text x="966" y="93" font-size="10.8" fill="#6b4530">工具调用轨迹</text>
+          <text x="958" y="117" font-size="10.8" fill="#6b4530">• 更新画布快照与</text>
+          <text x="966" y="134" font-size="10.8" fill="#6b4530">动态卡片载荷</text>
+          <text x="958" y="158" font-size="10.8" fill="#6b4530">• 异步提炼用户偏好</text>
+          <text x="958" y="182" font-size="10.8" fill="#6b4530">• 计入账号 Token 用量</text>
+
+          <!-- Bottom note bar -->
+          <rect x="12" y="228" width="1096" height="26" rx="6" fill="#f0f3ee"/>
+          <text x="560" y="245" text-anchor="middle" font-size="11.5" fill="#495b53">铁律：写知识库永远是「draft_wiki_card 草稿投放画布 → 用户点保存才调用持久化接口」，Agent 不可静默覆盖正式 Wiki 卡片</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" style="width:180px">Tool 名称</th>
+            <th scope="col" style="width:125px">归属分组</th>
+            <th scope="col" style="width:150px">触发权限 / 开关</th>
+            <th scope="col">核心职责与产出</th>
+            <th scope="col" style="width:120px">交付阶段</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>kb_search</code></td>
+            <td>知识检索</td>
+            <td>常驻开启（自主调用）</td>
+            <td>按 <code>user_id</code> 混合检索（中文全文 + 向量 + Index 目录），返回最相关卡片/原资料摘要与出处 ID；命中时引导模型优先引用本库作答并向画布推荐旧卡。</td>
+            <td><span class="tag tag-v1">V1 必做</span></td>
+          </tr>
+          <tr>
+            <td><code>web_search</code></td>
+            <td>联网兜底</td>
+            <td>常驻开启（库无命中时）</td>
+            <td>当 <code>kb_search</code> 置信度低于阈值或用户显式要求外部最新信息时触发；调用联网搜索引擎返回标题、摘要与 URL，严禁无据编造。</td>
+            <td><span class="tag tag-v1">V1 必做</span></td>
+          </tr>
+          <tr>
+            <td><code>draft_wiki_card</code></td>
+            <td>知识沉淀技能</td>
+            <td>受「生成知识卡」技能开关控制</td>
+            <td>先执行库内同义查重（建议补旧卡或建新卡），生成标准 Markdown 知识卡草稿并下发 <code>canvas_op</code> 至画布预览；用户点「保存」后才正式落库。</td>
+            <td><span class="tag tag-v1">V1 必做</span></td>
+          </tr>
+          <tr>
+            <td><code>quiz_generate_mcq</code></td>
+            <td>知返出题工具</td>
+            <td>受「选择题」开关控制（亦被入库异步队列调用）</td>
+            <td>强绑定 <code>card_id</code> 生成单选/多选题（含 1 正确项 + 3 强干扰项 + 解析），标注考察维度（<code>understanding</code> 认知理解 / <code>scenario_prediction</code> 情境应用预测），落库至 <code>card_questions</code> 1:N 题库并渲染选择题卡。</td>
+            <td><span class="tag tag-v1">V1 必做</span></td>
+          </tr>
+          <tr>
+            <td><code>quiz_generate_tf</code><br><code>quiz_generate_blank</code><br><code>quiz_generate_qa</code></td>
+            <td>知返扩展题型</td>
+            <td>受「判断 / 填空 / 问答」开关控制</td>
+            <td>通过同一 <code>QuizTool</code> 接口扩展<strong>判断题（True/False）</strong>、关键概念填空题、开放问答题（含 AI 批改 Rubric）与伪代码预测题；全部落库至 <code>card_questions</code> 并按 <code>card_type</code> 路由渲染。</td>
+            <td><span class="tag tag-v15">V1.5 扩展</span></td>
+          </tr>
+          <tr>
+            <td><code>canvas_dispatch</code></td>
+            <td>页内卡片槽操控</td>
+            <td>常驻开启（受情境页范围 + Pin 保护）</td>
+            <td>仅在当前预设情境页允许的受控槽位内投放白名单预设卡片（<code>mount_card</code> / <code>replace_unpinned</code>），严禁越界改变页面骨架或覆盖已钉住插槽。</td>
+            <td><span class="tag tag-v1">V1 必做</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Newly added: Card-Bound Question Pool, Async Auto-2-MCQ, Diff Coverage Check & Map-Driven Radar -->
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card top-orange">
+        <h3>入库默认 2 题 + 改卡判重流水线 <span class="tag tag-amber">V1 新增</span></h3>
+        <ul class="clean-list">
+          <li><b>新建卡保存（异步零阻塞）：</b>保存立即返回前端；若用户开启「入库自动出题」（默认开），投递异步 Job 生成 2 道选择题：<b>① 认知理解题</b> + <b>② 实际情境应用预测题</b>。</li>
+          <li><b>多文档补卡 / 更新判重：</b>将本次 <code>card_diff</code> 与该卡现有 <code>card_questions</code> 摘要一起交由判重 Prompt 评估；已有题已覆盖则不重复出题，未覆盖才增量生成并挂靠至该卡。</li>
+          <li><b>重复复习抽题策略：</b>优先从该卡题库抽取未做过/曾做错的题；题池已全做过或用户点「换新题」时再调 <code>QuizTool</code> 追加挂靠。</li>
+        </ul>
+      </div>
+
+      <div class="card top-purple">
+        <h3>独立错题页解耦架构 <span class="tag tag-amber">V1 新增</span></h3>
+        <ul class="clean-list">
+          <li><b>完全解耦入库流程：</b>错题表（<code>wrong_book</code>）仅消费练题提交事件做客观记录，不阻塞也不反向修改 Wiki 入库或草稿流。</li>
+          <li><b>防积压生命周期：</b>支持 <code>active → archived（归档）</code> 与 <code>deleted（删除）</code> 操作，独立错题页默认只看活跃错题，可切 Tab 回看归档记录。</li>
+          <li><b>重做与变式：</b>每条错题绑定原 <code>question_id</code> 与出题时的 <code>card_version_no</code>，支持重做原题或生成变式题。</li>
+        </ul>
+      </div>
+
+      <div class="card top-teal">
+        <h3>知识地图 ──▶ 知识雷达依赖链 <span class="tag tag-amber">V1 显式化</span></h3>
+        <ul class="clean-list">
+          <li><b>前置依赖知识地图：</b>雷达引擎不孤立盲猜，直接读取 <code>wiki_edges</code> 关系图谱与每张卡的题库作答掌握度（已掌握 / 未练 / 高错题）。</li>
+          <li><b>缺口定位算法：</b>识别用户已掌握集群的外围缺失前置/进阶节点与薄弱桥接点，输出 2~3 张「下一张待学知识卡」建议及推荐理由。</li>
+          <li><b>闭环回流：</b>用户点击采纳后才进入待学清单，避免被动塞垃圾任务。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 预设情境独立多页、页内受控动态卡片与交互记忆系统 -->
+  <section class="sec" id="canvas">
+    <div class="sec-head">
+      <h2><span class="sec-num">05</span>按功能分类的预设情境多页与交互记忆系统（含交互演示）</h2>
+      <p class="sec-sub">独立页面预设情境防失控 + 页内有限动态调整（预设卡片）+ Pin 钉住防覆写 + 按页记忆续接</p>
+    </div>
+
+    <!-- Interactive Architecture Demo -->
+    <div class="panel">
+      <div class="panel-head">
+        <strong>多页预设情境与问答页受控开关交互原型（可点击左侧切换情境、点「钉住」与「题型开关」验证运行时约束）</strong>
+        <span class="tag tag-amber">交互式协议演示</span>
+      </div>
+      <div class="wireframe">
+        <!-- Left Rail: Independent Scene Pages -->
+        <div class="wf-col">
+          <div class="wf-title"><span>左区 · 独立功能页面路由</span><span>预设情境</span></div>
+          <div class="wf-nav-item active">① 统一问答页（对话 + 页内受控槽）</div>
+          <div class="wf-nav-item">② 全局搜索页（全文/多维筛选）</div>
+          <div class="wf-nav-item">③ 知识来源页（插槽上传/预览/三出口）</div>
+          <div class="wf-nav-item">④ LLM Wiki 页（知识卡/主题/1:N题池）</div>
+          <div class="wf-nav-item">⑤ 知识地图 &amp; 知识雷达页</div>
+          <div class="wf-nav-item">⑥ 独立错题页（解耦客观记录/归档删除）</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:auto;padding-top:6px;border-top:1px dashed var(--line)">
+            每页独立预设固定情境与按钮操作，只允许在页内槽位做有限调整。
+          </div>
+        </div>
+
+        <!-- Center Stage: In-Page Limited Dynamic Slots (Demoing Q&A Scene) -->
+        <div class="wf-col">
+          <div class="wf-title"><span>中区 · 问答页内受控卡片槽（有限调整）</span><span>当前情境: chat_qa</span></div>
+          <div class="wf-card pinned" id="demo-slot-1">
+            <div class="wf-card-head">
+              <strong>Slot A · 预设卡：<code>wiki_card_viewer</code></strong>
+              <button type="button" class="pin-btn pinned" data-pin="demo-slot-1">📌 已钉住（防覆写）</button>
+            </div>
+            <div>知识卡：《分布式事务与幂等键设计》· v3 · 已挂靠题池：4 题</div>
+            <div style="color:var(--muted);margin-top:3px">钉住状态下，右侧持续对话时 Agent 不可替换本槽内容。</div>
+          </div>
+
+          <div class="wf-card" id="demo-slot-2">
+            <div class="wf-card-head">
+              <strong>Slot B · 预设卡：<code>quiz_mcq_card</code>（情境应用预测）</strong>
+              <button type="button" class="pin-btn" data-pin="demo-slot-2">📍 未钉住（允许替换）</button>
+            </div>
+            <div><b>[选择题 · 应用预测]</b> 若将 Git 采集器改为保留整库源码快照，后续删库或重构时最可能引发哪类问题？</div>
+            <div style="color:var(--dim);margin-top:4px">A. 仅影响搜索速度 &nbsp; B. 知识卡强耦合易失实现且丧失公共性 ✓</div>
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:11.8px;color:var(--dim);margin-top:auto">
+            <span>页内预设卡白名单：<code>wiki_card</code> · <code>wiki_draft_diff</code> · <code>quiz_mcq</code> · <code>source_preview</code></span>
+          </div>
+        </div>
+
+        <!-- Right Rail: Unified Chat + Skill/Quiz Switches -->
+        <div class="wf-col">
+          <div class="wf-title"><span>右区 · 统一 AI 对话流</span><span>工具驱动</span></div>
+          <div class="wf-msg user">我刚看懂了幂等键设计，给我抽一道没做过的应用选择题</div>
+          <div class="wf-msg">
+            已从《分布式事务与幂等键设计》的 1:N 题库池抽取 1 道未做过的「情境应用预测」选择题，未覆盖你钉住的 Slot A，已投递至 <b>Slot B</b>。
+          </div>
+          <div class="wf-switches" id="demo-switches">
+            <button type="button" class="sw-chip" data-sw="gen_card">生成知识卡：关</button>
+            <button type="button" class="sw-chip on" data-sw="mcq">选择题：开</button>
+            <button type="button" class="sw-chip" data-sw="tf">判断题(V1.5)：关</button>
+            <button type="button" class="sw-chip" data-sw="blank">填空题(V1.5)：关</button>
+            <button type="button" class="sw-chip" data-sw="qa">问答题(V1.5)：关</button>
+          </div>
+          <div class="tool-preview" id="demo-tool-preview">Active Tools: ["kb_search", "web_search", "canvas_dispatch", "quiz_generate_mcq"]</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:14px">
+      <div class="card top-teal">
+        <h3>前端渲染协议：功能分页预设情境 + 页内受控槽</h3>
+        <ul class="clean-list">
+          <li><b>按功能划分独立页面：</b>明确区分「问答页 / 搜索页 / 知识来源页 / Wiki 页 / 知识地图与雷达页 / 独立错题页」，每个页面都有固定预设情境与传统直达交互，移动端天然契合分页导航。</li>
+          <li><b>页内有限动态调整（Card Registry）：</b>仅在页面预留的受控卡片槽内允许用户手动调整或 Agent 投放预设卡片（如 <code>wiki_card_viewer</code>、<code>wiki_draft_diff</code>、<code>quiz_mcq_card</code>），杜绝整页结构飘移。</li>
+          <li><b>Pin 钉住双向保护：</b>用户点击卡片右上角钉住按钮 → 前端更新状态并按 <code>page_scene</code> 落库 → 请求携带 <code>pinned_slots</code> → 后端拦截覆写指令，改投空闲槽或提示用户。</li>
+        </ul>
+      </div>
+
+      <div class="card top-purple">
+        <h3>三层交互记忆系统（按情境页无缝续接）</h3>
+        <ul class="clean-list">
+          <li><b>① 情境页工作区快照（<code>page_canvas_states</code>）：</b>按 <code>(user_id, page_scene, session_id)</code> 记录该页卡片槽的 <code>card_type</code>、<code>ref_id</code>、动态 <code>payload_json</code>（如未提交的题目选项）与 <code>is_pinned</code> 状态，退出重登 100% 续接。</li>
+          <li><b>② 用户交互习惯记忆（<code>user_memories</code>）：</b>记录常驻开关偏好（题型开关、入库自动出题开关、默认讲解风格）与常用模型路由，每次进入主循环自动注入轻量 Profile。</li>
+          <li><b>③ 对话情节与引用保护（<code>chat_messages</code>）：</b>长会话滚动摘要，被知识卡引用的关键对话轮次加锁保留摘录，删除旧会话不断出处链。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. 多租户数据架构与核心 ER 模型 -->
+  <section class="sec" id="data">
+    <div class="sec-head">
+      <h2><span class="sec-num">06</span>多租户数据架构与核心存储模型</h2>
+      <p class="sec-sub">全表强制 <code>user_id</code> 分区隔离；单库（PostgreSQL + pgvector + 中文分词）覆盖关系、全文与语义检索，降低运维复杂度</p>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="t-schema">核心表结构清单</button>
+      <button type="button" class="tab-btn" data-tab="t-ddl">关键数据契约示例（DDL / JSON）</button>
+      <button type="button" class="tab-btn" data-tab="t-isolation">四重租户隔离防线</button>
+    </div>
+
+    <div class="tab-pane active" id="t-schema">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" style="width:185px">表 / 存储域</th>
+              <th scope="col" style="width:165px">租户隔离键</th>
+              <th scope="col">核心字段设计</th>
+              <th scope="col" style="width:26%">关联能力</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th><code>users</code> / <code>user_api_keys</code></th>
+              <td><code>id (user_id)</code></td>
+              <td>账号凭证、角色（user/admin）、加密存储的多模型 API Key（按场景路由：主循环/子循环/出题）、Collector PAT 令牌。</td>
+              <td>V1 多人登录鉴权、本地单人默认账号、多模型路由</td>
+            </tr>
+            <tr>
+              <th><code>raw_sources</code></th>
+              <td><code>user_id</code> + <code>source_id</code></td>
+              <td><code>plugin_id</code>、<code>source_type</code>、只读原件 OSS 键、校验后的 <code>standard_md</code>、<code>frontmatter_json</code>、去重指纹、状态（资料箱/待学/已制卡）。</td>
+              <td>插槽来源统一落库、统一三出口、出处回跳</td>
+            </tr>
+            <tr>
+              <th><code>wiki_cards</code> &amp;<br><code>wiki_card_versions</code></th>
+              <td><code>user_id</code> + <code>card_id</code></td>
+              <td>标题、标准 MD 正文、当前 <code>version_no</code>、关联 <code>source_refs</code>、选填个人心得、全文检索 tsvector + 语义 embedding；版本表全量存历史快照。</td>
+              <td>LLM Wiki 知识卡、版本对比回退、混合检索</td>
+            </tr>
+            <tr>
+              <th><code>wiki_topics</code> &amp;<br><code>wiki_edges</code></th>
+              <td><code>user_id</code></td>
+              <td>主题页（支持多对多挂卡）；关系边表（<code>from_card_id</code>, <code>to_card_id</code>, <code>relation_type</code>, <code>reason</code>）及变更日志 <code>wiki_logs</code>。</td>
+              <td>主题阅读路线、知识地图图谱、健康巡检</td>
+            </tr>
+            <tr>
+              <th><code>chat_sessions</code> &amp;<br><code>chat_messages</code></th>
+              <td><code>user_id</code> + <code>session_id</code></td>
+              <td>统一对话会话、消息角色、文本内容、<code>tool_calls_json</code>、出处引用列表、<code>is_citation_locked</code>（被卡片引用时删除会话保留摘录）。</td>
+              <td>统一 AI 对话、引用保护、Token 审计</td>
+            </tr>
+            <tr>
+              <th><code>page_canvas_states</code> &amp;<br><code>user_memories</code></th>
+              <td><code>user_id</code> + <code>page_scene</code></td>
+              <td>按独立情境页（<code>chat_qa</code> / <code>search</code> / <code>wiki</code> 等）存储页内受控槽位、<code>card_type</code>、<code>payload_json</code> 与 <code>is_pinned</code>；用户开关偏好（含入库自动出题开关）与交互习惯。</td>
+              <td>预设情境多页有限调整、Pin 保护、退出续接记忆</td>
+            </tr>
+            <tr>
+              <th><code>card_questions</code><br><span class="tag tag-amber">独立 1:N 题库</span></th>
+              <td><code>user_id</code> + <code>card_id</code></td>
+              <td>强绑定 <code>card_id</code> 与 <code>card_version_no</code>、可选 <code>source_id</code>、<code>tool_type</code>（mcq/tf/blank/qa）、<code>dimension</code>（<code>understanding</code> / <code>scenario_prediction</code>）、题干选项解析 JSON、覆盖点摘要 <code>coverage_summary</code>（供改卡判重）。</td>
+              <td>一卡多题挂靠、入库默认 2 选择题、改卡判重补题、重复复习抽题</td>
+            </tr>
+            <tr>
+              <th><code>todo_items</code> &amp;<br><code>quiz_attempts</code></th>
+              <td><code>user_id</code></td>
+              <td>全来源待学项（关联草稿卡）；作答流水表（关联 <code>question_id</code>、锁定出题时卡版本、用户作答、判分与解析、选填心得）。</td>
+              <td>待学转正、练习历史回看、掌握度计算（喂给知识地图与雷达）</td>
+            </tr>
+            <tr>
+              <th><code>wrong_book</code><br><span class="tag tag-amber">解耦独立错题</span></th>
+              <td><code>user_id</code> + <code>question_id</code></td>
+              <td>与 Wiki 入库完全解耦的客观记录表：关联原 <code>question_id</code>、错因记录、状态 <code>status (active | archived | deleted)</code>、<code>archived_at</code>、变式题关联。</td>
+              <td>独立错题页、原题/变式重练、错题归档与删除防积压</td>
+            </tr>
+            <tr>
+              <th><code>async_jobs</code></th>
+              <td><code>user_id</code> + <code>job_id</code></td>
+              <td>子循环解析任务（PDF/截帧/Git 总结）与<strong>出题异步任务</strong>（入库默认 2 题 / 改卡判重补题）、幂等去重键、进度、错误栈、Token 消耗。</td>
+              <td>后台任务中心、防重与重试、成本可控</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="t-ddl">
+      <div class="grid-2">
+        <pre><span class="c">-- 1. 强绑定知识卡的独立 1:N 题库表（支持多文档补卡判重与重复复习挂靠）</span>
+<span class="k">CREATE TABLE</span> card_questions (
+  id               UUID <span class="k">PRIMARY KEY</span>,
+  user_id          UUID <span class="k">NOT NULL REFERENCES</span> users(id),
+  card_id          UUID <span class="k">NOT NULL REFERENCES</span> wiki_cards(id) <span class="k">ON DELETE CASCADE</span>,
+  card_version_no  INT  <span class="k">NOT NULL</span>,
+  source_id        UUID,  <span class="c">-- 触发本次补题的来源文档(如 PDF/Word)，可选</span>
+  tool_type        VARCHAR(24) <span class="k">NOT NULL</span>, <span class="c">-- 'mcq' | 'tf' | 'blank' | 'qa'</span>
+  dimension        VARCHAR(32) <span class="k">NOT NULL</span>, <span class="c">-- 'understanding' | 'scenario_prediction'</span>
+  coverage_summary TEXT <span class="k">NOT NULL</span>,        <span class="c">-- 考点一句话摘要，供改卡判重</span>
+  question_json    JSONB <span class="k">NOT NULL</span>,       <span class="c">-- 题干、选项、标准答案与详尽解析</span>
+  created_at       TIMESTAMPTZ <span class="k">NOT NULL DEFAULT</span> now()
+);
+
+<span class="c">-- 2. 与入库完全解耦的独立错题表（支持归档与删除防积压）</span>
+<span class="k">CREATE TABLE</span> wrong_book (
+  id              UUID <span class="k">PRIMARY KEY</span>,
+  user_id         UUID <span class="k">NOT NULL REFERENCES</span> users(id),
+  question_id     UUID <span class="k">NOT NULL REFERENCES</span> card_questions(id),
+  card_id         UUID <span class="k">NOT NULL</span>,
+  card_version_no INT  <span class="k">NOT NULL</span>,
+  status          VARCHAR(16) <span class="k">NOT NULL DEFAULT</span> <span class="s">'active'</span>, <span class="c">-- 'active' | 'archived' | 'deleted'</span>
+  wrong_count     INT  <span class="k">NOT NULL DEFAULT</span> 1,
+  last_wrong_at   TIMESTAMPTZ <span class="k">NOT NULL DEFAULT</span> now(),
+  archived_at     TIMESTAMPTZ
+);</pre>
+
+        <pre><span class="c">-- 3. 按独立情境页粒度的受控状态持久化表</span>
+<span class="k">CREATE TABLE</span> page_canvas_states (
+  id           UUID <span class="k">PRIMARY KEY</span>,
+  user_id      UUID <span class="k">NOT NULL REFERENCES</span> users(id),
+  page_scene   VARCHAR(32) <span class="k">NOT NULL</span>, <span class="c">-- 'chat_qa' | 'search' | 'sources' | 'wiki' | 'map' | 'wrong_book'</span>
+  session_id   UUID,
+  slots_json   JSONB <span class="k">NOT NULL</span>,       <span class="c">-- [{slot_id, card_type, ref_id, is_pinned, payload}]</span>
+  updated_at   TIMESTAMPTZ <span class="k">NOT NULL DEFAULT</span> now(),
+  <span class="k">UNIQUE</span> (user_id, page_scene, session_id)
+);
+
+<span class="c">-- 4. 用户交互习惯与开关记忆表（含入库自动出题开关 + 题型开关）</span>
+<span class="k">CREATE TABLE</span> user_memories (
+  user_id            UUID <span class="k">PRIMARY KEY REFERENCES</span> users(id),
+  auto_quiz_on_save  BOOLEAN <span class="k">NOT NULL DEFAULT true</span>, <span class="c">-- 入库异步生成2道选择题开关</span>
+  ui_switches_json   JSONB <span class="k">NOT NULL DEFAULT</span> <span class="s">'{
+    "skill_gen_card": false,
+    "quiz_tools": { "mcq": true, "tf": false, "blank": false, "qa": false }
+  }'</span>::jsonb,
+  habit_profile      JSONB <span class="k">NOT NULL DEFAULT</span> <span class="s">'{}'</span>::jsonb,
+  updated_at         TIMESTAMPTZ <span class="k">NOT NULL DEFAULT</span> now()
+);
+
+<span class="c">-- 行级安全兜底 (PostgreSQL RLS 全表统一开启)</span>
+<span class="k">ALTER TABLE</span> card_questions <span class="k">ENABLE ROW LEVEL SECURITY</span>;
+<span class="k">CREATE POLICY</span> tenant_iso_questions <span class="k">ON</span> card_questions
+  <span class="k">USING</span> (user_id = current_setting(<span class="s">'app.current_user_id'</span>)::uuid);</pre>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="t-isolation">
+      <div class="grid-4">
+        <div class="card top-purple">
+          <h4>1. 接口鉴权层</h4>
+          <p>每个请求经 JWT / Collector PAT 解析出 <code>user_id</code> 并写入请求级上下文；严禁信任前端请求体传入的 <code>user_id</code>。</p>
+        </div>
+        <div class="card top-teal">
+          <h4>2. 数据库 RLS 兜底</h4>
+          <p>ORM 仓储层自动拼接 <code>WHERE user_id = ?</code>，同时在 PostgreSQL 开启 Row-Level Security（RLS）做数据库级双保险。</p>
+        </div>
+        <div class="card top-blue">
+          <h4>3. 检索与向量隔离</h4>
+          <p>全文检索与向量相似度检索必须将 <code>user_id</code> 作为前置过滤条件，杜绝 RAG 跨账号串库泄露隐私笔记。</p>
+        </div>
+        <div class="card top-orange">
+          <h4>4. 对象存储隔离</h4>
+          <p>所有图片、截帧与原文件统一落盘至 <code>u/{user_id}/...</code>，通过后端签名 URL 或鉴权代理访问，不暴露公网裸链。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. 已拍板技术栈、工程门禁与部署形态 -->
+  <section class="sec" id="deploy">
+    <div class="sec-head">
+      <h2><span class="sec-num">07</span>已落地技术栈、DSH 工程门禁、双形态部署与 4 人并行契约</h2>
+      <p class="sec-sub">全栈 TypeScript Monorepo + Pi Agent 核心层已搭建并跑绿；支持零 Docker 本地直跑与容器/裸机无缝部署</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card top-teal">
+        <h3>已定稿技术栈与 Monorepo 包切分（<code>@zhizhi/*</code>）</h3>
+        <ul class="clean-list">
+          <li><b>Agent 核心层（<code>@zhizhi/agent-runtime</code>）：</b>原生接入 <code>@earendil-works/pi-agent-core</code>（主循环 <code>Agent</code> + <code>beforeToolCall</code> / <code>finishTurn</code>）与 <code>@earendil-works/pi-ai</code>（多模型路由 + <code>completeSimple</code> 无状态子循环 + 官方 <code>fauxProvider</code> 零费测试）。</li>
+          <li><b>后端服务（<code>apps/server</code>）：</b>TypeScript + <strong>Hono</strong>（HTTP + 双通道 SSE + scrypt/JWT 多租户鉴权中间件），与前端 100% 共享 <code>@zhizhi/contracts</code> Zod 契约与 <code>@zhizhi/brand</code> 品牌 ID。</li>
+          <li><b>数据、存储与队列（<code>packages/infra/*</code>）：</b><strong>Drizzle ORM</strong> 统一 PostgreSQL 语法（本地零 Docker 用嵌入式 <strong>PGlite</strong>，生产填 <code>DATABASE_URL</code> 切标准 PG）；<code>StorageSeam</code>（LocalFs / S3）；<strong>DbJobQueue</strong> 基于 <code>async_jobs</code> 表实现，<strong>V1 去掉 Redis 强制依赖</strong>。</li>
+          <li><b>前端与移动端演进（<code>@zhizhi/client-core</code> + <code>apps/web</code>）：</b>React 19 + Vite + Tailwind v4 + React Router + Zustand；业务逻辑与 SSE/Pin 状态机沉淀在零 DOM 的 <code>client-core</code>，Web 预配 PWA 与移动端底部 6 Tab + 问答卡片抽屉，后续平滑扩展 Capacitor / React Native。</li>
+          <li><b>外部 Python 开源二开：</b>复杂 PDF/视频/OCR 通过独立 <strong>MCP Server 插件</strong>（<code>uv</code> 管理）挂载到 <code>@zhizhi/plugin-sdk</code> 插槽，与主 TS 仓库解耦。</li>
+        </ul>
+      </div>
+
+      <div class="card top-blue">
+        <h3>参考 DeepSeek Harness 的工程门禁 + 零 Docker 双形态部署</h3>
+        <ul class="clean-list">
+          <li><b>DSH 同款质量红线（<code>pnpm run check:all</code>）：</b>双面 TypeScript 严格检查（<code>tsconfig.host.json</code> / <code>tsconfig.client.json</code>）、<code>oxlint --type-aware</code>（2 空格/单引号/无分号/禁 Floating Promise/禁 <code>crypto.randomUUID</code>）、<code>lefthook</code>（pre-commit 秒级 lint，pre-push 跑 typecheck + 门禁）。</li>
+          <li><b>5 条可执行静态门禁（<code>scripts/run-gates.ts</code>）：</b>禁 <code>as unknown</code>、禁无说明空 <code>catch</code>、禁前端误引后端/Node 包（<code>verify-workspace-deps</code>）、强制租户作用域检查（<code>verify-tenant-scope</code>）、ESM 导出校验；配套根目录 <code>AGENTS.md</code> / <code>CLAUDE.md</code> 统一 4 人 AI 协作规范。</li>
+          <li><b>形态 A · 零 Docker 极速开发 / 个人单机：</b><code>pnpm install &amp;&amp; pnpm dev</code> 直接启动，PGlite + LocalFs + DbJobQueue 零外部依赖落盘 <code>.zhizhi/</code>。</li>
+          <li><b>形态 B · 团队共享服务器（裸机或 Docker 任选）：</b>配置 <code>DATABASE_URL</code> 与 S3/OSS 即可直连自装 PG/云 RDS 或使用 <code>deploy/docker-compose.yml</code> 一键拉起 PG(pgvector) + MinIO，同一套代码零分叉。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>4 人并行研发的“基座契约已就绪”状态：</strong>4 份核心接口总线已在 <code>packages/shared/*</code>、<code>packages/ingest/plugin-sdk</code>、<code>packages/agent/runtime</code> 与 <code>packages/infra/*</code> 落地并跑通测试——
+      ① <code>StandardMarkdownDocumentSchema</code>；
+      ② <code>SourcePlugin / SourcePluginRegistry</code>（Slot + MCP）；
+      ③ <code>SseEventSchema / CanvasOperationSchema / PageSceneSchema</code>；
+      ④ <code>TenantContext + withTenant() + ZhizhiError</code>。各研发线直接基于基座并行填充业务域即可。
+    </div>
+
+    <div class="table-wrap" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" style="width:160px">研发小组 / 职责线</th>
+            <th scope="col">核心负责模块</th>
+            <th scope="col" style="width:28%">对外交付的契约 / 接口</th>
+            <th scope="col" style="width:24%">V1 验收里程碑</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>A 线 · 底座与 Wiki</th>
+            <td>多人登录鉴权、<code>user_id</code> RLS 隔离、OSS 托管、Wiki 卡/主题/版本回退、中文混合检索、巡检与按账号备份。</td>
+            <td>Auth 中间件、<code>kb_search</code> 工具后端实现、Wiki CRUD &amp; 预览保存 API。</td>
+            <td>双账号互不可见；入库预览保存与版本一键回退跑通。</td>
+          </tr>
+          <tr>
+            <th>B 线 · 插件与中间层</th>
+            <td>插槽式插件注册表（支持内置 + MCP）、AI 解析子循环 Worker、Standard MD Schema 校验、网页/视频截帧与 HTML/PDF/MD 解析。</td>
+            <td><code>SourcePlugin</code> 抽象、<code>StandardMarkdown</code> 校验器、异步任务状态 API。</td>
+            <td>卸载任一插件不崩溃；PDF 含表格+图片稳定输出标准 MD。</td>
+          </tr>
+          <tr>
+            <th>C 线 · Git 与地图</th>
+            <td>Win/Mac 跨端 Git 采集器（含架构级总结、剥离代码片段）、提交去噪归并、知识地图图谱引擎与状态着色。</td>
+            <td><code>/ingest/git-summary</code> 推数标准、图谱数据 API 与前端图谱组件。</td>
+            <td>20 条杂乱 Commit 归并为 2~3 个无源码依赖的架构知识点；图谱可点选出题。</td>
+          </tr>
+          <tr>
+            <th>D 线 · Agent、多页情境与题库错题</th>
+            <td>预设情境多页框架与页内受控卡片槽（含钉住）、交互记忆持久化、统一问答主循环（自主查库 + 联网兜底）、<code>card_questions</code> 1:N 题库（入库异步 2 选择题 + 改卡判重）、独立错题页（解耦 + 归档/删除）与基于知识地图的雷达引擎。</td>
+            <td>SSE <code>canvas_op</code> 协议、<code>QuizTool</code> 注册接口、异步出题消费契约、预设卡片组件库。</td>
+            <td>新卡保存秒返且异步落 2 题；补卡判重不重复出题；错题独立归档删除；钉住与记忆续接跑通。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>知枝 Web · 完整系统架构设计（v1.2 工程基座定稿版）</span>
+    <span>配套产品功能树：zhizhi-web-feature-spec-v3.html ｜ 仓库规范：AGENTS.md</span>
+  </footer>
+</main>
+
+<!-- Modal -->
+<dialog id="arch-dialog" aria-label="系统架构全景放大视图">
+  <div class="dialog-bar">
+    <strong>知枝 Web · 5 层系统架构全景图</strong>
+    <form method="dialog"><button type="submit" class="btn-outline">关闭</button></form>
+  </div>
+  <div class="dialog-body" id="arch-dialog-body"></div>
+</dialog>
+
+<script>
+// Tabs for Section 6
+const tabBtns = [...document.querySelectorAll('.tab-btn')];
+const tabPanes = [...document.querySelectorAll('.tab-pane')];
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    tabPanes.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Interactive Pin demo in Section 5
+document.querySelectorAll('[data-pin]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const slot = document.getElementById(btn.dataset.pin);
+    const pinned = !btn.classList.contains('pinned');
+    btn.classList.toggle('pinned', pinned);
+    slot.classList.toggle('pinned', pinned);
+    btn.textContent = pinned ? '📌 已钉住（防覆写）' : '📍 未钉住（允许替换）';
+  });
+});
+
+// Interactive Switch -> Active Tools demo in Section 5
+const swState = { gen_card: false, mcq: true, tf: false, blank: false, qa: false };
+const swLabels = {
+  gen_card: ['生成知识卡：关', '生成知识卡：开'],
+  mcq: ['选择题：关', '选择题：开'],
+  tf: ['判断题(V1.5)：关', '判断题(V1.5)：开'],
+  blank: ['填空题(V1.5)：关', '填空题(V1.5)：开'],
+  qa: ['问答题(V1.5)：关', '问答题(V1.5)：开']
+};
+const toolPreview = document.getElementById('demo-tool-preview');
+
+function updateToolPreview() {
+  const active = ['kb_search', 'web_search', 'canvas_dispatch'];
+  if (swState.gen_card) active.push('draft_wiki_card');
+  if (swState.mcq) active.push('quiz_generate_mcq');
+  if (swState.tf) active.push('quiz_generate_tf');
+  if (swState.blank) active.push('quiz_generate_blank');
+  if (swState.qa) active.push('quiz_generate_qa');
+  toolPreview.textContent = `Active Tools: ${JSON.stringify(active)}`;
+}
+
+document.querySelectorAll('[data-sw]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const k = btn.dataset.sw;
+    swState[k] = !swState[k];
+    btn.classList.toggle('on', swState[k]);
+    btn.textContent = swLabels[k][swState[k] ? 1 : 0];
+    updateToolPreview();
+  });
+});
+
+// Fullscreen modal for Architecture SVG
+document.getElementById('btn-zoom-arch').addEventListener('click', () => {
+  const dlg = document.getElementById('arch-dialog');
+  const body = document.getElementById('arch-dialog-body');
+  const svgClone = document.querySelector('#arch-slot svg').cloneNode(true);
+  body.innerHTML = '';
+  body.appendChild(svgClone);
+  dlg.showModal();
+});
+</script>
+</body>
+</html>

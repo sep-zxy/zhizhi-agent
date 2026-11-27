@@ -1,0 +1,20 @@
+# Git hooks (lefthook) — 参考 DeepSeek Harness 轻量快速门禁策略
+# 安装: node scripts/install-lefthook.mjs (postinstall 自动执行)
+
+pre-commit:
+  jobs:
+    - name: lint (staged)
+      glob: '*.{ts,tsx,mts,cts}'
+      run: pnpm exec oxlint --fix {staged_files}
+      stage_fixed: true
+
+    - name: whitespace (staged)
+      run: git diff --cached --check
+
+pre-push:
+  jobs:
+    - name: typecheck
+      run: pnpm run typecheck
+
+    - name: repository gates
+      run: pnpm run check

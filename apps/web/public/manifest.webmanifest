@@ -1,0 +1,9 @@
+{
+  "name": "知枝 Web · Agent-Native LLM Wiki",
+  "short_name": "知枝",
+  "start_url": "/chat",
+  "display": "standalone",
+  "background_color": "#f5f4ee",
+  "theme_color": "#14362a",
+  "lang": "zh-CN"
+}

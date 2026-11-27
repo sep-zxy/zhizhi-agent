@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, Lint, Gates & Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check whitespace & trailing newlines
+        run: git diff --check $(git hash-object -t tree /dev/null) HEAD -- packages apps scripts
+
+      - name: Typecheck (Host + Client)
+        run: pnpm run typecheck
+
+      - name: Lint (oxlint type-aware)
+        run: pnpm run lint
+
+      - name: Repository static gates
+        run: pnpm run check
+
+      - name: Unit & multi-tenant tests (Pi Agent fauxProvider)
+        run: pnpm run test
+
+      - name: Build Web frontend
+        run: pnpm --filter @zhizhi/web run build
+
+      - name: Upload Web dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zhizhi-web-dist-${{ github.sha }}
+          path: apps/web/dist
+          retention-days: 7

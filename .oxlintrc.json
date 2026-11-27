@@ -1,0 +1,133 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [],
+  "categories": {
+    "correctness": "off"
+  },
+  "options": {
+    "reportUnusedDisableDirectives": "warn",
+    "typeAware": true
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "**/lib/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    ".zhizhi/**",
+    "docs/**",
+    "**/*.js",
+    "**/*.mjs",
+    "**/*.config.ts"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "packages/*/*/src/**/*.{ts,tsx}",
+        "packages/*/*/tests/**/*.{ts,tsx}",
+        "apps/*/src/**/*.{ts,tsx}",
+        "apps/*/tests/**/*.{ts,tsx}",
+        "scripts/**/*.ts"
+      ],
+      "plugins": ["typescript"],
+      "rules": {
+        "no-var": "error",
+        "prefer-const": "error",
+        "prefer-rest-params": "error",
+        "prefer-spread": "error",
+        "no-array-constructor": "error",
+        "no-unused-expressions": "error",
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ],
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "crypto",
+            "property": "randomUUID",
+            "message": "Plain-HTTP LAN pages withhold crypto.randomUUID; mint IDs via @zhizhi/brand instead."
+          }
+        ],
+        "typescript/await-thenable": "error",
+        "typescript/ban-ts-comment": ["error", { "minimumDescriptionLength": 10 }],
+        "typescript/no-explicit-any": "error",
+        "typescript/no-floating-promises": "error",
+        "typescript/no-misused-promises": "error",
+        "typescript/no-for-in-array": "error",
+        "typescript/no-implied-eval": "error",
+        "typescript/no-require-imports": "error",
+        "typescript/no-unsafe-argument": "error",
+        "typescript/no-unsafe-assignment": "error",
+        "typescript/no-unsafe-call": "error",
+        "typescript/no-unsafe-member-access": "error",
+        "typescript/no-unsafe-return": "error",
+        "typescript/prefer-as-const": "error",
+        "typescript/return-await": ["error", "error-handling-correctness-only"],
+        "typescript/use-unknown-in-catch-callback-variable": "error"
+      }
+    },
+    {
+      "files": [
+        "packages/*/*/src/**/*.{ts,tsx}",
+        "apps/*/src/**/*.{ts,tsx}",
+        "scripts/**/*.ts"
+      ],
+      "plugins": ["typescript"],
+      "rules": {
+        "typescript/no-non-null-assertion": "error",
+        "typescript/only-throw-error": "error",
+        "typescript/switch-exhaustiveness-check": [
+          "error",
+          { "considerDefaultExhaustiveForUnions": true }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/**/*.{ts,tsx}",
+        "apps/**/*.{ts,tsx}",
+        "scripts/**/*.ts"
+      ],
+      "jsPlugins": ["eslint-plugin-sonarjs"],
+      "rules": {
+        "sonarjs/no-all-duplicated-branches": "error",
+        "sonarjs/no-duplicate-test-title": "error",
+        "sonarjs/no-identical-conditions": "error",
+        "sonarjs/no-identical-expressions": "error"
+      }
+    },
+    {
+      "files": [
+        "packages/**/*.{ts,tsx}",
+        "apps/**/*.{ts,tsx}",
+        "scripts/**/*.ts"
+      ],
+      "jsPlugins": ["@stylistic/eslint-plugin"],
+      "rules": {
+        "@stylistic/indent": ["error", 2],
+        "@stylistic/semi": ["error", "never"],
+        "@stylistic/quotes": ["error", "single", { "avoidEscape": true }],
+        "@stylistic/comma-dangle": ["error", "always-multiline"],
+        "@stylistic/eol-last": ["error", "always"],
+        "@stylistic/no-trailing-spaces": "error",
+        "@stylistic/object-curly-spacing": ["error", "always"],
+        "@stylistic/arrow-parens": ["error", "as-needed", { "requireForBlockBody": true }],
+        "@stylistic/max-len": [
+          "error",
+          {
+            "code": 140,
+            "ignoreUrls": true,
+            "ignoreStrings": true,
+            "ignoreTemplateLiterals": true
+          }
+        ]
+      }
+    }
+  ]
+}
