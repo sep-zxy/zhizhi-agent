@@ -1,7 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm'
-import { asBrand, mintJobId, type JobId } from '@zhizhi/brand'
+import { asBrand, mintJobId, type JobId, type UserId } from '@zhizhi/brand'
 import type { TenantContext } from '@zhizhi/contracts'
-import { asyncJobs, withTenant, type DatabaseHandle } from '@zhizhi/db'
+import { asyncJobs, users, withTenant, type DatabaseHandle } from '@zhizhi/db'
 import { ZhizhiError } from '@zhizhi/errors'
 
 export type ZhizhiJobType =
@@ -32,6 +32,11 @@ export type JobHandler = (
   tenant: TenantContext,
   reportProgress: (percent: number) => Promise<void>,
 ) => Promise<Record<string, unknown>>
+
+export interface JobWorkerOptions {
+  readonly pollIntervalMs?: number
+  readonly onError?: (err: unknown) => void
+}
 
 /**
  * 基于 async_jobs 表的轻量持久化异步队列（V1 零 Redis 依赖，重启不丢任务）。
@@ -101,6 +106,28 @@ export class DbJobQueue {
         errorText: row.errorText,
         attempts: row.attempts,
       }))
+    })
+  }
+
+  async getByIdForTenant(tenant: TenantContext, jobId: JobId): Promise<JobRecord | null> {
+    return withTenant(this.dbHandle, tenant, async (db) => {
+      const rows = await db
+        .select()
+        .from(asyncJobs)
+        .where(and(eq(asyncJobs.userId, tenant.userId), eq(asyncJobs.id, jobId)))
+        .limit(1)
+      const row = rows[0]
+      if (!row) return null
+      return {
+        id: asBrand<JobId>(row.id),
+        jobType: row.jobType as ZhizhiJobType,
+        status: row.status,
+        progress: row.progress,
+        payload: row.payloadJson as Record<string, unknown>,
+        result: (row.resultJson as Record<string, unknown> | null) ?? null,
+        errorText: row.errorText,
+        attempts: row.attempts,
+      }
     })
   }
 
@@ -178,6 +205,72 @@ export class DbJobQueue {
           .where(and(eq(asyncJobs.id, picked.id), eq(asyncJobs.userId, tenant.userId)))
       })
       return { ...picked, status: nextStatus, errorText: message }
+    }
+  }
+
+  /**
+   * 后台 Worker 单步调度：按入队时间捞取最早一条 queued 任务的所属租户，
+   * 构造完整 TenantContext 后完全委托给 `runNextForTenant()` 在租户隔离内执行。
+   */
+  async runNextPending(): Promise<JobRecord | null> {
+    const queued = await this.dbHandle.db
+      .select({ userId: asyncJobs.userId })
+      .from(asyncJobs)
+      .where(eq(asyncJobs.status, 'queued'))
+      .orderBy(asc(asyncJobs.createdAt))
+      .limit(1)
+
+    const nextRow = queued[0]
+    if (!nextRow) return null
+
+    const userId = asBrand<UserId>(nextRow.userId)
+    const userRows = await this.dbHandle.db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    const role: TenantContext['role'] = userRows[0]?.role === 'admin' ? 'admin' : 'user'
+
+    return this.runNextForTenant({ userId, role })
+  }
+
+  /**
+   * 启动进程内轻量后台 Worker 轮询循环，返回 disposer 用于优雅停机。
+   * 串行非重入调度，兼容嵌入式 PGlite 与 PostgreSQL，零额外队列中间件依赖。
+   */
+  startWorker(options: JobWorkerOptions = {}): () => void {
+    const pollIntervalMs = Math.max(50, options.pollIntervalMs ?? 1_000)
+    let stopped = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const schedule = (delayMs: number): void => {
+      if (stopped) return
+      timer = setTimeout(() => {
+        void tick()
+      }, delayMs)
+      timer.unref?.()
+    }
+
+    const tick = async (): Promise<void> => {
+      if (stopped) return
+      let ranJob = false
+      try {
+        const processed = await this.runNextPending()
+        ranJob = processed !== null
+      } catch (err) {
+        options.onError?.(err)
+      }
+      schedule(ranJob ? 10 : pollIntervalMs)
+    }
+
+    schedule(pollIntervalMs)
+
+    return () => {
+      stopped = true
+      if (timer !== undefined) {
+        clearTimeout(timer)
+        timer = undefined
+      }
     }
   }
 }

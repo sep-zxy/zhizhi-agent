@@ -59,6 +59,12 @@ importers:
       '@zhizhi/brand':
         specifier: workspace:*
         version: link:../../packages/shared/brand
+      '@zhizhi/cap-asr':
+        specifier: workspace:*
+        version: link:../../packages/capabilities/asr
+      '@zhizhi/cap-media-frames':
+        specifier: workspace:*
+        version: link:../../packages/capabilities/media-frames
       '@zhizhi/contracts':
         specifier: workspace:*
         version: link:../../packages/shared/contracts
@@ -68,9 +74,15 @@ importers:
       '@zhizhi/errors':
         specifier: workspace:*
         version: link:../../packages/shared/errors
+      '@zhizhi/ingest-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/ingest/pipeline
       '@zhizhi/jobs':
         specifier: workspace:*
         version: link:../../packages/infra/jobs
+      '@zhizhi/plugin-douyin-dtk':
+        specifier: workspace:*
+        version: link:../../packages/ingest/plugin-douyin-dtk
       '@zhizhi/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/ingest/plugin-sdk
@@ -142,6 +154,33 @@ importers:
         specifier: workspace:*
         version: link:../../shared/errors
 
+  packages/capabilities/asr:
+    dependencies:
+      '@zhizhi/errors':
+        specifier: workspace:*
+        version: link:../../shared/errors
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
+  packages/capabilities/mcp-client:
+    dependencies:
+      '@zhizhi/errors':
+        specifier: workspace:*
+        version: link:../../shared/errors
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
+  packages/capabilities/media-frames:
+    dependencies:
+      '@zhizhi/cap-asr':
+        specifier: workspace:*
+        version: link:../asr
+      '@zhizhi/errors':
+        specifier: workspace:*
+        version: link:../../shared/errors
+
   packages/client/core:
     dependencies:
       '@zhizhi/contracts':
@@ -196,11 +235,80 @@ importers:
         specifier: workspace:*
         version: link:../../shared/errors
 
+  packages/ingest/pipeline:
+    dependencies:
+      '@zhizhi/agent-runtime':
+        specifier: workspace:*
+        version: link:../../agent/runtime
+      '@zhizhi/brand':
+        specifier: workspace:*
+        version: link:../../shared/brand
+      '@zhizhi/cap-asr':
+        specifier: workspace:*
+        version: link:../../capabilities/asr
+      '@zhizhi/cap-media-frames':
+        specifier: workspace:*
+        version: link:../../capabilities/media-frames
+      '@zhizhi/contracts':
+        specifier: workspace:*
+        version: link:../../shared/contracts
+      '@zhizhi/db':
+        specifier: workspace:*
+        version: link:../../infra/db
+      '@zhizhi/errors':
+        specifier: workspace:*
+        version: link:../../shared/errors
+      '@zhizhi/jobs':
+        specifier: workspace:*
+        version: link:../../infra/jobs
+      '@zhizhi/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      '@zhizhi/storage':
+        specifier: workspace:*
+        version: link:../../infra/storage
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.6.0)(postgres@4.1.1)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
+  packages/ingest/plugin-douyin-dtk:
+    dependencies:
+      '@zhizhi/brand':
+        specifier: workspace:*
+        version: link:../../shared/brand
+      '@zhizhi/cap-mcp-client':
+        specifier: workspace:*
+        version: link:../../capabilities/mcp-client
+      '@zhizhi/contracts':
+        specifier: workspace:*
+        version: link:../../shared/contracts
+      '@zhizhi/errors':
+        specifier: workspace:*
+        version: link:../../shared/errors
+      '@zhizhi/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
   packages/ingest/plugin-sdk:
     dependencies:
       '@zhizhi/brand':
         specifier: workspace:*
         version: link:../../shared/brand
+      '@zhizhi/cap-asr':
+        specifier: workspace:*
+        version: link:../../capabilities/asr
+      '@zhizhi/cap-mcp-client':
+        specifier: workspace:*
+        version: link:../../capabilities/mcp-client
+      '@zhizhi/cap-media-frames':
+        specifier: workspace:*
+        version: link:../../capabilities/media-frames
       '@zhizhi/contracts':
         specifier: workspace:*
         version: link:../../shared/contracts

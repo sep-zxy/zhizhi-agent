@@ -26,7 +26,12 @@
       "@zhizhi/db": ["./packages/infra/db/src/index.ts"],
       "@zhizhi/storage": ["./packages/infra/storage/src/index.ts"],
       "@zhizhi/jobs": ["./packages/infra/jobs/src/index.ts"],
+      "@zhizhi/cap-mcp-client": ["./packages/capabilities/mcp-client/src/index.ts"],
+      "@zhizhi/cap-asr": ["./packages/capabilities/asr/src/index.ts"],
+      "@zhizhi/cap-media-frames": ["./packages/capabilities/media-frames/src/index.ts"],
       "@zhizhi/plugin-sdk": ["./packages/ingest/plugin-sdk/src/index.ts"],
+      "@zhizhi/ingest-pipeline": ["./packages/ingest/pipeline/src/index.ts"],
+      "@zhizhi/plugin-douyin-dtk": ["./packages/ingest/plugin-douyin-dtk/src/index.ts"],
       "@zhizhi/agent-runtime": ["./packages/agent/runtime/src/index.ts"],
       "@zhizhi/client-core": ["./packages/client/core/src/index.ts"]
     }

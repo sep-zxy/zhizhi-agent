@@ -5,7 +5,11 @@ import { collectTsFiles, relativeFile, type GateViolation } from './gate-utils.t
  * 门禁 4（知枝专属）：扫描业务域与受保护接口中的数据库查询，确保通过 withTenant 或 userId 执行。
  */
 export function verifyTenantScope(): GateViolation[] {
-  const files = collectTsFiles(['packages/domain', 'packages/infra/jobs/src'])
+  const files = collectTsFiles([
+    'packages/domain',
+    'packages/infra/jobs/src',
+    'packages/ingest/pipeline/src',
+  ])
   const violations: GateViolation[] = []
   const dbQueryPattern = /\b(db|tx)\.(select|update|delete|insert)\b/
 

@@ -1,0 +1,86 @@
+# 可选边车：Evil0ctal/Douyin_TikTok_Download_API v5（Apache-2.0）
+# ------------------------------------------------------------------
+# 说明：
+# 1. 知枝本地开发默认零 Docker（pnpm dev 可无此边车正常运行，抖音插件将自动处于 standby 状态）。
+# 2. 需要真实联调抖音/TikTok/B 站 MCP 采集时，按官方仓库指引启动 DTK v5，并把地址与 API Key 注入知枝服务端：
+#      DTK_MCP_URL=http://127.0.0.1:8000/mcp/
+#      DTK_API_KEY=dtk_YOUR_API_KEY
+# 3. 完整自愈浏览器池与 FunASR 转写模型准备请参考上游仓库：
+#      https://github.com/Evil0ctal/Douyin_TikTok_Download_API
+
+services:
+  dtk-postgres:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dtk
+      POSTGRES_PASSWORD: ${DTK_POSTGRES_PASSWORD:-change_me_dtk_pg}
+      POSTGRES_DB: dtk
+    volumes:
+      - dtk-pg-data:/var/lib/postgresql/data
+
+  dtk-redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${DTK_REDIS_PASSWORD:-change_me_dtk_redis}"]
+    volumes:
+      - dtk-redis-data:/data
+
+  dtk-api:
+    image: evil0ctal/douyin_tiktok_download_api:5.1.13
+    restart: unless-stopped
+    command: ["api"]
+    depends_on:
+      - dtk-postgres
+      - dtk-redis
+    ports:
+      - "${DTK_PORT:-8000}:8000"
+    environment:
+      TZ: Asia/Shanghai
+      DTK_BIND_HOST: "0.0.0.0"
+      DTK_BIND_PORT: "8000"
+      DTK_MEDIA_DIR: /var/lib/dtk/media
+      DTK_SECRET_KEY: ${DTK_SECRET_KEY:-please-generate-a-48-byte-random-secret-key}
+      DTK_DATABASE_URL: postgresql+asyncpg://dtk:${DTK_POSTGRES_PASSWORD:-change_me_dtk_pg}@dtk-postgres:5432/dtk
+      DTK_REDIS_URL: redis://:${DTK_REDIS_PASSWORD:-change_me_dtk_redis}@dtk-redis:6379/0
+    volumes:
+      - dtk-media-data:/var/lib/dtk/media
+
+  dtk-worker:
+    image: evil0ctal/douyin_tiktok_download_api:5.1.13
+    restart: unless-stopped
+    command: ["worker"]
+    depends_on:
+      - dtk-postgres
+      - dtk-redis
+    environment:
+      TZ: Asia/Shanghai
+      DTK_MEDIA_DIR: /var/lib/dtk/media
+      DTK_SECRET_KEY: ${DTK_SECRET_KEY:-please-generate-a-48-byte-random-secret-key}
+      DTK_DATABASE_URL: postgresql+asyncpg://dtk:${DTK_POSTGRES_PASSWORD:-change_me_dtk_pg}@dtk-postgres:5432/dtk
+      DTK_REDIS_URL: redis://:${DTK_REDIS_PASSWORD:-change_me_dtk_redis}@dtk-redis:6379/0
+    volumes:
+      - dtk-media-data:/var/lib/dtk/media
+
+  dtk-downloader:
+    image: evil0ctal/douyin_tiktok_download_api-downloader:5.1.13
+    restart: unless-stopped
+    profiles: ["downloader"]
+    volumes:
+      - dtk-media-data:/var/lib/dtk/media
+
+  dtk-transcriber:
+    image: evil0ctal/douyin_tiktok_download_api-transcriber:5.1.13
+    restart: unless-stopped
+    profiles: ["transcriber"]
+    environment:
+      DTK_TRANSCRIBER_MODEL_DIR: /models/funasr
+      DTK_TRANSCRIBER_MEDIA_ROOT: /var/lib/dtk/media
+    volumes:
+      - dtk-media-data:/var/lib/dtk/media:ro
+      - ${DTK_TRANSCRIBER_MODEL_PATH:-./models/funasr-onnx}:/models/funasr:ro
+
+volumes:
+  dtk-pg-data:
+  dtk-redis-data:
+  dtk-media-data:

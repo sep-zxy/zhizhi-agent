@@ -21,9 +21,28 @@ async function main(): Promise<void> {
   const deps = createDefaultDependencies(dbHandle, storage, jwtSecret)
   const app = createServerApp(deps)
 
-  serve({ fetch: app.fetch, port, hostname: host }, (info) => {
-    console.log(`[zhizhi-server] listening on http://${info.address}:${info.port} (db=${dbHandle.driver}, storage=${storage.driver})`)
+  const jobPollMs = Number(process.env['ZHIZHI_JOB_POLL_MS'] ?? '1000')
+  const stopWorker = deps.jobs.startWorker({
+    pollIntervalMs: Number.isFinite(jobPollMs) && jobPollMs >= 50 ? jobPollMs : 1_000,
+    onError(err) {
+      console.error('[zhizhi-worker] background job error:', err)
+    },
   })
+
+  const server = serve({ fetch: app.fetch, port, hostname: host }, (info) => {
+    console.log(
+      `[zhizhi-server] listening on http://${info.address}:${info.port} `
+      + `(db=${dbHandle.driver}, storage=${storage.driver}, worker=enabled)`,
+    )
+  })
+
+  const shutdown = (): void => {
+    stopWorker()
+    server.close()
+    void dbHandle.close()
+  }
+  process.once('SIGINT', shutdown)
+  process.once('SIGTERM', shutdown)
 }
 
 void main()

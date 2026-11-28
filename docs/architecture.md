@@ -9,7 +9,7 @@
 | **L1 展示与多页情境层** | `apps/web` + `packages/client/core` | 6 个预设情境独立页（问答/搜索/来源/Wiki/地图雷达/独立错题）、页内受控卡片槽 + Pin 钉住、零 DOM 状态与 SSE 客户端 |
 | **L2 接入与多租户鉴权层** | `apps/server` | Hono HTTP + SSE 协议网关、JWT/PAT 鉴权中间件、`TenantContext(userId)` 注入 |
 | **L3-A Agent 主循环层** | `packages/agent/runtime` | 封装 `@earendil-works/pi-agent-core` + `@earendil-works/pi-ai`；按 UI 开关动态裁剪 Tool 白名单；桥接 SSE 与 `canvas_op` |
-| **L3-B 插槽采集与解析子循环** | `packages/ingest/plugin-sdk` | `SourcePlugin` 可拆卸注册表（内置 Slot + MCP 适配）、`StandardMarkdown` 运行时校验、异步解析子循环契约 |
+| **L3-B 公共能力与插槽解析层** | `packages/capabilities/*` + `packages/ingest/*` | 跨平台共享基础能力（`cap-mcp-client`、`cap-asr`、`cap-media-frames`）、可拆卸 `SourcePlugin` 注册表（含 `plugin-douyin-dtk`）、通用 `ingest-pipeline` 与 `StandardMarkdown` 强校验 |
 | **L4 基础设施与存储层** | `packages/infra/{db,storage,jobs}` | Drizzle ORM（PGlite 零 Docker / PostgreSQL 双驱动 + RLS 事务钩子）、LocalFs/S3 对象存储、基于 `async_jobs` 表的持久化队列 |
 | **共享契约层** | `packages/shared/{brand,errors,contracts}` | 品牌 ID、结构化 `ZhizhiError`、Zod Schema（零外部业务依赖，Host 与 Client 共用） |
 
