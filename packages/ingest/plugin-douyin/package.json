@@ -1,5 +1,5 @@
 {
-  "name": "@zhizhi/plugin-douyin-dtk",
+  "name": "@zhizhi/plugin-douyin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@zhizhi/brand": "workspace:*",
-    "@zhizhi/cap-mcp-client": "workspace:*",
+    "@zhizhi/cap-asr": "workspace:*",
+    "@zhizhi/cap-media-frames": "workspace:*",
     "@zhizhi/contracts": "workspace:*",
     "@zhizhi/errors": "workspace:*",
     "@zhizhi/plugin-sdk": "workspace:*",

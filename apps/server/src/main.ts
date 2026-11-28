@@ -1,10 +1,31 @@
+import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { serve } from '@hono/node-server'
 import { createDatabase } from '@zhizhi/db'
 import { LocalFsStorageProvider } from '@zhizhi/storage'
 import { createDefaultDependencies, createServerApp } from './app.ts'
 
+function loadLocalEnvFiles(): void {
+  const serverDir = path.dirname(fileURLToPath(import.meta.url))
+  const candidates = [
+    path.resolve(serverDir, '../../../.env'),
+    path.resolve(serverDir, '../../../.env.local'),
+    path.resolve(serverDir, '../.env'),
+    path.resolve(serverDir, '../.env.local'),
+  ]
+  for (const filePath of candidates) {
+    if (!fs.existsSync(filePath)) continue
+    try {
+      process.loadEnvFile(filePath)
+    } catch (_err) {
+      // Ignore unreadable local env file; explicit process.env still takes precedence.
+    }
+  }
+}
+
 async function main(): Promise<void> {
+  loadLocalEnvFiles()
   const port = Number(process.env['PORT'] ?? '3080')
   const host = process.env['HOST'] ?? '127.0.0.1'
   const dataDir = process.env['ZHIZHI_DATA_DIR'] ?? '.zhizhi'

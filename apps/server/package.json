@@ -18,7 +18,7 @@
     "@zhizhi/errors": "workspace:*",
     "@zhizhi/ingest-pipeline": "workspace:*",
     "@zhizhi/jobs": "workspace:*",
-    "@zhizhi/plugin-douyin-dtk": "workspace:*",
+    "@zhizhi/plugin-douyin": "workspace:*",
     "@zhizhi/plugin-sdk": "workspace:*",
     "@zhizhi/storage": "workspace:*",
     "drizzle-orm": "^0.45.4",

@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   applyCanvasOperation,
   collectPinnedSlotIds,
   parseSseDataLine,
   toggleSlotPin,
+  ZhizhiApiClient,
+  ZhizhiApiError,
 } from '@zhizhi/client-core'
 import type { CanvasSlotState } from '@zhizhi/contracts'
 
@@ -38,5 +40,31 @@ describe('client-core zero-DOM state helpers', () => {
     const ev = parseSseDataLine('data: {"type":"text_delta","delta":"hello"}')
     expect(ev).toEqual({ type: 'text_delta', delta: 'hello' })
     expect(parseSseDataLine('data: [DONE]')).toBeNull()
+  })
+
+  it('calls plugins, ingest, and error envelopes cleanly via ZhizhiApiClient', async () => {
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({
+        plugins: [
+          {
+            pluginId: 'douyin',
+            displayName: '抖音插件',
+            mode: 'in_process',
+            supportedTypes: ['video_note'],
+            needsSubLoop: true,
+            ok: true,
+          },
+        ],
+      }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Token expired' } }), { status: 401 }),
+      )
+
+    const client = new ZhizhiApiClient({ baseUrl: 'http://127.0.0.1:3080', fetchImpl })
+    const plugins = await client.listPlugins('jwt-token')
+    expect(plugins).toHaveLength(1)
+    expect(plugins[0]).toMatchObject({ pluginId: 'douyin', mode: 'in_process', ok: true })
+
+    await expect(client.listJobs('bad-token')).rejects.toThrow(ZhizhiApiError)
   })
 })

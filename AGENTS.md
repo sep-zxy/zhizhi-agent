@@ -24,13 +24,13 @@ packages/
     storage/         对象存储 Capability Seam（LocalFs / S3）
     jobs/            基于 async_jobs 表的持久化队列（无 Redis 强制依赖）
   capabilities/
-    mcp-client/      通用受控 MCP 客户端（Streamable HTTP，供插件与管线复用）
+    mcp-client/      通用受控 MCP 客户端（Streamable HTTP，供外部 MCP 来源复用）
     asr/             语音转写 Capability Seam（时间戳对齐与多后端适配）
     media-frames/    字幕归一化与 FFmpeg 三级重点帧截图兜底
   ingest/
     plugin-sdk/      插槽式来源插件协议（内置 Slot + MCP 适配）与 StandardMarkdown 校验
     pipeline/        跨平台采集编排、AI 解析子循环与 raw_sources 落库
-    plugin-douyin-dtk/ 抖音来源插槽插件（路线 A：对接 DTK v5 MCP Sidecar）
+    plugin-douyin/   私有化进程内抖音来源插件（无需独立容器）
   agent/
     runtime/         基于 Pi Agent 的主循环编排、动态 Tool 裁剪与 Mock Provider
   client/

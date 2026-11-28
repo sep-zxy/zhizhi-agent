@@ -44,7 +44,7 @@ import {
 import { isZhizhiError, ZhizhiError } from '@zhizhi/errors'
 import { IngestPipelineService } from '@zhizhi/ingest-pipeline'
 import { DbJobQueue } from '@zhizhi/jobs'
-import { createDouyinDtkPluginFromEnv } from '@zhizhi/plugin-douyin-dtk'
+import { createDouyinPluginFromEnv } from '@zhizhi/plugin-douyin'
 import { SourcePluginRegistry } from '@zhizhi/plugin-sdk'
 import type { StorageProvider } from '@zhizhi/storage'
 import { authenticateUser, registerUser, signAccessToken, verifyAccessToken } from './auth.ts'
@@ -162,10 +162,17 @@ export function createServerApp(deps: ServerDependencies): Hono<{ Variables: App
 
   protectedApi.use('*', async (c, next) => {
     const authHeader = c.req.header('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token: string | null = null
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7).trim()
+    } else if (c.req.method === 'GET' && c.req.path === '/api/v1/assets') {
+      // 浏览器 <img> 标签无法附带自定义 Authorization 头，仅对只读资产流接口允许 query token 鉴权
+      const queryToken = c.req.query('token')?.trim()
+      if (queryToken) token = queryToken
+    }
+    if (!token) {
       throw new ZhizhiError({ code: 'UNAUTHORIZED', message: 'Missing Bearer access token' })
     }
-    const token = authHeader.slice(7).trim()
     const tenant = await verifyAccessToken(token, deps.jwtSecret)
     c.set('tenant', tenant)
     await next()
@@ -370,6 +377,23 @@ export function createServerApp(deps: ServerDependencies): Hono<{ Variables: App
     return c.json({ source })
   })
 
+  // 读取当前租户落盘的二进制资产（用于 Markdown 中的 asset://u/{userId}/assets/... 图片直接渲染）
+  protectedApi.get('/assets', async (c) => {
+    const tenant = c.get('tenant')
+    const rawKey = c.req.query('key')?.trim() ?? ''
+    const key = rawKey.startsWith('asset://') ? rawKey.slice('asset://'.length) : rawKey
+    if (!key) {
+      throw new ZhizhiError({ code: 'VALIDATION_FAILED', message: 'Missing asset key query parameter' })
+    }
+    const bytes = await deps.storage.get(tenant.userId, key)
+    const contentType = inferAssetContentType(key)
+    const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+    return c.body(body, 200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'private, max-age=3600',
+    })
+  })
+
   // 查询当前账号异步任务队列（解析子循环 + 入库默认 2 题任务）
   protectedApi.get('/jobs', async (c) => {
     const tenant = c.get('tenant')
@@ -391,6 +415,18 @@ export function createServerApp(deps: ServerDependencies): Hono<{ Variables: App
   return app
 }
 
+function inferAssetContentType(key: string): string {
+  const lower = key.toLowerCase()
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg'
+  if (lower.endsWith('.png')) return 'image/png'
+  if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.gif')) return 'image/gif'
+  if (lower.endsWith('.svg')) return 'image/svg+xml'
+  if (lower.endsWith('.mp3')) return 'audio/mpeg'
+  if (lower.endsWith('.mp4')) return 'video/mp4'
+  return 'application/octet-stream'
+}
+
 function createAsrProviderFromEnv(env: NodeJS.ProcessEnv): AsrProvider {
   const baseUrl = env['ZHIZHI_ASR_BASE_URL']?.trim()
   const apiKey = env['ZHIZHI_ASR_API_KEY']?.trim()
@@ -409,7 +445,7 @@ export function createDefaultDependencies(
 ): ServerDependencies {
   const jobs = new DbJobQueue(dbHandle)
   const plugins = new SourcePluginRegistry()
-  plugins.register(createDouyinDtkPluginFromEnv(env))
+  plugins.register(createDouyinPluginFromEnv(env))
 
   const ingestPipeline = new IngestPipelineService({
     dbHandle,

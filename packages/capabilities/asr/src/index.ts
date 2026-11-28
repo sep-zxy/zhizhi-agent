@@ -1,7 +1,12 @@
+import { execFile } from 'node:child_process'
 import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
+import { promisify } from 'node:util'
 import { z } from 'zod'
 import { ZhizhiError } from '@zhizhi/errors'
+
+const execFileAsync = promisify(execFile)
 
 export interface TranscriptSegment {
   readonly startSec: number
@@ -46,6 +51,7 @@ export interface OpenAiCompatibleAsrConfig {
   readonly baseUrl: string
   readonly apiKey: string
   readonly model: string
+  readonly ffmpegPath?: string
   readonly fetchImpl?: typeof fetch
   readonly timeoutMs?: number
 }
@@ -72,6 +78,7 @@ export class OpenAiCompatibleAsrProvider implements AsrProvider {
   private readonly endpointUrl: string
   private readonly apiKey: string
   private readonly model: string
+  private readonly ffmpegPath: string
   private readonly fetchImpl: typeof fetch
   private readonly timeoutMs: number
 
@@ -83,7 +90,8 @@ export class OpenAiCompatibleAsrProvider implements AsrProvider {
       : `${normalizedBase}/audio/transcriptions`
     this.apiKey = config.apiKey
     this.model = config.model
-    this.fetchImpl = config.fetchImpl ?? globalThis.fetch
+    this.ffmpegPath = config.ffmpegPath ?? 'ffmpeg'
+    this.fetchImpl = config.fetchImpl ?? ((input, init) => globalThis.fetch(input, init))
     this.timeoutMs = config.timeoutMs ?? 120_000
   }
 
@@ -102,11 +110,15 @@ export class OpenAiCompatibleAsrProvider implements AsrProvider {
       })
     }
 
-    const { bytes, filename, contentType } = await loadMediaBytes(
+    const loaded = await loadMediaBytes(
       request.media,
       this.fetchImpl,
       request.signal,
     )
+    const { bytes, filename, contentType } =
+      request.media.kind === 'video' || loaded.contentType.startsWith('video/') || loaded.filename.endsWith('.mp4')
+        ? await extractAudioTrackIfPossible(loaded, this.ffmpegPath, request.signal)
+        : loaded
 
     const form = new FormData()
     const blob = new Blob([Uint8Array.from(bytes)], { type: contentType })
@@ -259,4 +271,58 @@ function inferAudioContentType(filename: string): string {
   if (lower.endsWith('.ogg')) return 'audio/ogg'
   if (lower.endsWith('.mp4')) return 'video/mp4'
   return 'application/octet-stream'
+}
+
+/**
+ * 公共音频预处理：多数云端 ASR（如 Groq Whisper 25MB 限制、硅基流动 SenseVoice 仅支持纯音频）
+ * 不接收原始 MP4 视频。遇到视频输入时自动通过本机 FFmpeg 抽出 16kHz 单声道 64kbps MP3，
+ * FFmpeg 不可用时优雅保留原字节不阻断单测与兜底路径。
+ */
+async function extractAudioTrackIfPossible(
+  loaded: { readonly bytes: Uint8Array; readonly filename: string; readonly contentType: string },
+  ffmpegPath: string,
+  signal?: AbortSignal,
+): Promise<{ readonly bytes: Uint8Array; readonly filename: string; readonly contentType: string }> {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'zhizhi-asr-'))
+  const inPath = path.join(tmpDir, loaded.filename || 'input.mp4')
+  const outPath = path.join(tmpDir, 'audio.mp3')
+  try {
+    await fs.writeFile(inPath, loaded.bytes)
+    await execFileAsync(
+      ffmpegPath,
+      [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-y',
+        '-i',
+        inPath,
+        '-vn',
+        '-ac',
+        '1',
+        '-ar',
+        '16000',
+        '-c:a',
+        'libmp3lame',
+        '-b:a',
+        '64k',
+        outPath,
+      ],
+      { timeout: 60_000, ...(signal ? { signal } : {}) },
+    )
+    const audioBuf = await fs.readFile(outPath)
+    if (audioBuf.byteLength > 0) {
+      return {
+        bytes: new Uint8Array(audioBuf.buffer, audioBuf.byteOffset, audioBuf.byteLength),
+        filename: 'audio.mp3',
+        contentType: 'audio/mpeg',
+      }
+    }
+    return loaded
+  } catch (_err) {
+    // FFmpeg missing or transcode error falls back to uploading the original payload.
+    return loaded
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true })
+  }
 }

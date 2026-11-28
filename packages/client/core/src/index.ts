@@ -143,3 +143,17 @@ export const PAGE_SCENES: readonly PageSceneMeta[] = [
     description: '与入库完全解耦的客观错题记录，支持原题/变式重练、归档与删除',
   },
 ]
+
+export {
+  ZhizhiApiClient,
+  ZhizhiApiError,
+  type AuthSession,
+  type ClientApiConfig,
+  type ClientJobItem,
+  type ClientSourceItem,
+  type IngestSourceRequest,
+  type IngestSourceResponse,
+  type PluginHealthItem,
+  type SourceJobResult,
+  type WikiCardDraftSummary,
+} from './api.ts'

@@ -16,7 +16,7 @@ export const sharedAlias = {
   '@zhizhi/cap-media-frames': path.resolve(root, 'packages/capabilities/media-frames/src/index.ts'),
   '@zhizhi/plugin-sdk': path.resolve(root, 'packages/ingest/plugin-sdk/src/index.ts'),
   '@zhizhi/ingest-pipeline': path.resolve(root, 'packages/ingest/pipeline/src/index.ts'),
-  '@zhizhi/plugin-douyin-dtk': path.resolve(root, 'packages/ingest/plugin-douyin-dtk/src/index.ts'),
+  '@zhizhi/plugin-douyin': path.resolve(root, 'packages/ingest/plugin-douyin/src/index.ts'),
   '@zhizhi/agent-runtime': path.resolve(root, 'packages/agent/runtime/src/index.ts'),
   '@zhizhi/client-core': path.resolve(root, 'packages/client/core/src/index.ts'),
 }
