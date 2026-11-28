@@ -10,6 +10,8 @@
     "packages/shared/*/tests/**/*.ts",
     "packages/infra/*/src/**/*.ts",
     "packages/infra/*/tests/**/*.ts",
+    "packages/capabilities/*/src/**/*.ts",
+    "packages/capabilities/*/tests/**/*.ts",
     "packages/ingest/*/src/**/*.ts",
     "packages/ingest/*/tests/**/*.ts",
     "packages/agent/*/src/**/*.ts",

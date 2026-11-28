@@ -11,7 +11,12 @@ export const sharedAlias = {
   '@zhizhi/db': path.resolve(root, 'packages/infra/db/src/index.ts'),
   '@zhizhi/storage': path.resolve(root, 'packages/infra/storage/src/index.ts'),
   '@zhizhi/jobs': path.resolve(root, 'packages/infra/jobs/src/index.ts'),
+  '@zhizhi/cap-mcp-client': path.resolve(root, 'packages/capabilities/mcp-client/src/index.ts'),
+  '@zhizhi/cap-asr': path.resolve(root, 'packages/capabilities/asr/src/index.ts'),
+  '@zhizhi/cap-media-frames': path.resolve(root, 'packages/capabilities/media-frames/src/index.ts'),
   '@zhizhi/plugin-sdk': path.resolve(root, 'packages/ingest/plugin-sdk/src/index.ts'),
+  '@zhizhi/ingest-pipeline': path.resolve(root, 'packages/ingest/pipeline/src/index.ts'),
+  '@zhizhi/plugin-douyin': path.resolve(root, 'packages/ingest/plugin-douyin/src/index.ts'),
   '@zhizhi/agent-runtime': path.resolve(root, 'packages/agent/runtime/src/index.ts'),
   '@zhizhi/client-core': path.resolve(root, 'packages/client/core/src/index.ts'),
 }

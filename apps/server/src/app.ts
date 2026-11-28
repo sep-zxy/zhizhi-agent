@@ -10,11 +10,27 @@ import {
   type ModelRouteSpec,
   type ZhizhiToolRegistry,
 } from '@zhizhi/agent-runtime'
-import { mintMessageId, mintSessionId, mintSlotId } from '@zhizhi/brand'
+import {
+  asBrand,
+  mintMessageId,
+  mintPluginId,
+  mintSessionId,
+  mintSlotId,
+  type JobId,
+  type SourceId,
+} from '@zhizhi/brand'
+import {
+  DisabledAsrProvider,
+  OpenAiCompatibleAsrProvider,
+  type AsrProvider,
+} from '@zhizhi/cap-asr'
+import { FfmpegKeyframeExtractor } from '@zhizhi/cap-media-frames'
 import {
   CanvasSlotStateSchema,
   ChatTurnRequestSchema,
   PageSceneSchema,
+  SourceDispositionSchema,
+  SourceTypeSchema,
   type TenantContext,
 } from '@zhizhi/contracts'
 import {
@@ -26,7 +42,9 @@ import {
   type DatabaseHandle,
 } from '@zhizhi/db'
 import { isZhizhiError, ZhizhiError } from '@zhizhi/errors'
+import { IngestPipelineService } from '@zhizhi/ingest-pipeline'
 import { DbJobQueue } from '@zhizhi/jobs'
+import { createDouyinPluginFromEnv } from '@zhizhi/plugin-douyin'
 import { SourcePluginRegistry } from '@zhizhi/plugin-sdk'
 import type { StorageProvider } from '@zhizhi/storage'
 import { authenticateUser, registerUser, signAccessToken, verifyAccessToken } from './auth.ts'
@@ -36,6 +54,7 @@ export interface ServerDependencies {
   readonly storage: StorageProvider
   readonly jobs: DbJobQueue
   readonly plugins: SourcePluginRegistry
+  readonly ingestPipeline: IngestPipelineService
   readonly tools: ZhizhiToolRegistry
   readonly jwtSecret: string
 }
@@ -59,6 +78,18 @@ const SaveCanvasStateBodySchema = z.object({
   pageScene: PageSceneSchema,
   sessionId: z.string().min(1).default('default'),
   slots: z.array(CanvasSlotStateSchema),
+})
+
+const IngestSourceBodySchema = z.object({
+  sourceType: SourceTypeSchema.default('video_note'),
+  titleHint: z.string().min(1).max(200).optional(),
+  url: z.string().url().optional(),
+  rawText: z.string().min(1).optional(),
+  mimeType: z.string().optional(),
+  disposition: SourceDispositionSchema.default('archive_only'),
+  pluginId: z.string().min(1).optional(),
+  maxKeyframes: z.number().int().min(1).max(8).optional(),
+  runNow: z.boolean().default(false),
 })
 
 export function createServerApp(deps: ServerDependencies): Hono<{ Variables: AppVariables }> {
@@ -131,10 +162,17 @@ export function createServerApp(deps: ServerDependencies): Hono<{ Variables: App
 
   protectedApi.use('*', async (c, next) => {
     const authHeader = c.req.header('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token: string | null = null
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7).trim()
+    } else if (c.req.method === 'GET' && c.req.path === '/api/v1/assets') {
+      // 浏览器 <img> 标签无法附带自定义 Authorization 头，仅对只读资产流接口允许 query token 鉴权
+      const queryToken = c.req.query('token')?.trim()
+      if (queryToken) token = queryToken
+    }
+    if (!token) {
       throw new ZhizhiError({ code: 'UNAUTHORIZED', message: 'Missing Bearer access token' })
     }
-    const token = authHeader.slice(7).trim()
     const tenant = await verifyAccessToken(token, deps.jwtSecret)
     c.set('tenant', tenant)
     await next()
@@ -272,6 +310,90 @@ export function createServerApp(deps: ServerDependencies): Hono<{ Variables: App
     })
   })
 
+  // 查询已注册来源插槽及实时健康状态（验证 ADR-02 可拆卸与离线降级）
+  protectedApi.get('/plugins', async (c) => {
+    const plugins = await deps.plugins.inspectHealth()
+    return c.json({ plugins })
+  })
+
+  // 投递来源采集任务至持久化异步队列（ADR-02 + ADR-03，严禁阻塞写库）
+  protectedApi.post('/sources/ingest', async (c) => {
+    const tenant = c.get('tenant')
+    const raw: unknown = await c.req.json()
+    const parsed = IngestSourceBodySchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new ZhizhiError({
+        code: 'VALIDATION_FAILED',
+        message: 'Invalid source ingest payload',
+        details: { issues: parsed.error.issues },
+      })
+    }
+
+    const input = {
+      sourceType: parsed.data.sourceType,
+      ...(parsed.data.titleHint !== undefined ? { titleHint: parsed.data.titleHint } : {}),
+      ...(parsed.data.url !== undefined ? { url: parsed.data.url } : {}),
+      ...(parsed.data.rawText !== undefined ? { rawText: parsed.data.rawText } : {}),
+      ...(parsed.data.mimeType !== undefined ? { mimeType: parsed.data.mimeType } : {}),
+    }
+    const targetPlugin =
+      parsed.data.pluginId !== undefined
+        ? deps.plugins.get(mintPluginId(parsed.data.pluginId))
+        : deps.plugins.resolveForInput(input)
+    const preflight = await targetPlugin.preflight(input, tenant)
+
+    const jobId = await deps.jobs.enqueue(tenant, {
+      jobType: 'ingest_sub_loop',
+      payload: {
+        input,
+        disposition: parsed.data.disposition,
+        pluginId: targetPlugin.pluginId,
+        ...(parsed.data.maxKeyframes !== undefined ? { maxKeyframes: parsed.data.maxKeyframes } : {}),
+      },
+    })
+
+    if (parsed.data.runNow) {
+      const completed = await deps.jobs.runNextForTenant(tenant)
+      return c.json({ jobId, pluginId: targetPlugin.pluginId, preflight, job: completed }, 200)
+    }
+
+    return c.json({ jobId, pluginId: targetPlugin.pluginId, preflight, status: 'queued' }, 202)
+  })
+
+  // 查询当前租户沉淀的 StandardMarkdown 来源列表与详情
+  protectedApi.get('/sources', async (c) => {
+    const tenant = c.get('tenant')
+    const sources = await deps.ingestPipeline.listSourcesByTenant(tenant)
+    return c.json({ sources })
+  })
+
+  protectedApi.get('/sources/:id', async (c) => {
+    const tenant = c.get('tenant')
+    const sourceId = asBrand<SourceId>(c.req.param('id'))
+    const source = await deps.ingestPipeline.getSourceByTenant(tenant, sourceId)
+    if (!source) {
+      throw new ZhizhiError({ code: 'NOT_FOUND', message: `Source "${sourceId}" not found` })
+    }
+    return c.json({ source })
+  })
+
+  // 读取当前租户落盘的二进制资产（用于 Markdown 中的 asset://u/{userId}/assets/... 图片直接渲染）
+  protectedApi.get('/assets', async (c) => {
+    const tenant = c.get('tenant')
+    const rawKey = c.req.query('key')?.trim() ?? ''
+    const key = rawKey.startsWith('asset://') ? rawKey.slice('asset://'.length) : rawKey
+    if (!key) {
+      throw new ZhizhiError({ code: 'VALIDATION_FAILED', message: 'Missing asset key query parameter' })
+    }
+    const bytes = await deps.storage.get(tenant.userId, key)
+    const contentType = inferAssetContentType(key)
+    const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+    return c.body(body, 200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'private, max-age=3600',
+    })
+  })
+
   // 查询当前账号异步任务队列（解析子循环 + 入库默认 2 题任务）
   protectedApi.get('/jobs', async (c) => {
     const tenant = c.get('tenant')
@@ -279,20 +401,67 @@ export function createServerApp(deps: ServerDependencies): Hono<{ Variables: App
     return c.json({ jobs })
   })
 
+  protectedApi.get('/jobs/:id', async (c) => {
+    const tenant = c.get('tenant')
+    const jobId = asBrand<JobId>(c.req.param('id'))
+    const job = await deps.jobs.getByIdForTenant(tenant, jobId)
+    if (!job) {
+      throw new ZhizhiError({ code: 'NOT_FOUND', message: `Job "${jobId}" not found` })
+    }
+    return c.json({ job })
+  })
+
   app.route('/api/v1', protectedApi)
   return app
+}
+
+function inferAssetContentType(key: string): string {
+  const lower = key.toLowerCase()
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg'
+  if (lower.endsWith('.png')) return 'image/png'
+  if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.gif')) return 'image/gif'
+  if (lower.endsWith('.svg')) return 'image/svg+xml'
+  if (lower.endsWith('.mp3')) return 'audio/mpeg'
+  if (lower.endsWith('.mp4')) return 'video/mp4'
+  return 'application/octet-stream'
+}
+
+function createAsrProviderFromEnv(env: NodeJS.ProcessEnv): AsrProvider {
+  const baseUrl = env['ZHIZHI_ASR_BASE_URL']?.trim()
+  const apiKey = env['ZHIZHI_ASR_API_KEY']?.trim()
+  const model = env['ZHIZHI_ASR_MODEL']?.trim() || 'FunAudioLLM/SenseVoiceSmall'
+  if (baseUrl && apiKey) {
+    return new OpenAiCompatibleAsrProvider({ baseUrl, apiKey, model })
+  }
+  return new DisabledAsrProvider()
 }
 
 export function createDefaultDependencies(
   dbHandle: DatabaseHandle,
   storage: StorageProvider,
   jwtSecret: string,
+  env: NodeJS.ProcessEnv = process.env,
 ): ServerDependencies {
+  const jobs = new DbJobQueue(dbHandle)
+  const plugins = new SourcePluginRegistry()
+  plugins.register(createDouyinPluginFromEnv(env))
+
+  const ingestPipeline = new IngestPipelineService({
+    dbHandle,
+    storage,
+    plugins,
+    asr: createAsrProviderFromEnv(env),
+    keyframes: new FfmpegKeyframeExtractor(),
+  })
+  ingestPipeline.registerJobHandler(jobs)
+
   return {
     dbHandle,
     storage,
-    jobs: new DbJobQueue(dbHandle),
-    plugins: new SourcePluginRegistry(),
+    jobs,
+    plugins,
+    ingestPipeline,
     tools: createDefaultToolRegistry(),
     jwtSecret,
   }

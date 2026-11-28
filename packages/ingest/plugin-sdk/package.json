@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@zhizhi/brand": "workspace:*",
+    "@zhizhi/cap-asr": "workspace:*",
+    "@zhizhi/cap-mcp-client": "workspace:*",
+    "@zhizhi/cap-media-frames": "workspace:*",
     "@zhizhi/contracts": "workspace:*",
     "@zhizhi/errors": "workspace:*"
   }

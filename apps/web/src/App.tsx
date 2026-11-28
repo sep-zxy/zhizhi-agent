@@ -7,6 +7,7 @@ import {
   type PageSceneMeta,
 } from '@zhizhi/client-core'
 import { useWorkspaceStore } from './store.ts'
+import { SourcesScenePage } from './SourcesPage.tsx'
 
 function ChatScenePage(): ReactElement {
   const {
@@ -237,10 +238,11 @@ export function App(): ReactElement {
       <main className="flex-1 p-3 pb-20 lg:p-5 lg:pb-5">
         <Routes>
           <Route path="/chat" element={<ChatScenePage />} />
-          {PAGE_SCENES.filter(s => s.scene !== 'chat_qa').map(meta => (
+          <Route path="/sources" element={<SourcesScenePage />} />
+          {PAGE_SCENES.filter(s => s.scene !== 'chat_qa' && s.scene !== 'sources').map(meta => (
             <Route key={meta.scene} path={meta.path} element={<PresetScenePlaceholder meta={meta} />} />
           ))}
-          <Route path="*" element={<Navigate to="/chat" replace />} />
+          <Route path="*" element={<Navigate to="/sources" replace />} />
         </Routes>
       </main>
 

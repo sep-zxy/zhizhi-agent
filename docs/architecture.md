@@ -9,14 +9,14 @@
 | **L1 展示与多页情境层** | `apps/web` + `packages/client/core` | 6 个预设情境独立页（问答/搜索/来源/Wiki/地图雷达/独立错题）、页内受控卡片槽 + Pin 钉住、零 DOM 状态与 SSE 客户端 |
 | **L2 接入与多租户鉴权层** | `apps/server` | Hono HTTP + SSE 协议网关、JWT/PAT 鉴权中间件、`TenantContext(userId)` 注入 |
 | **L3-A Agent 主循环层** | `packages/agent/runtime` | 封装 `@earendil-works/pi-agent-core` + `@earendil-works/pi-ai`；按 UI 开关动态裁剪 Tool 白名单；桥接 SSE 与 `canvas_op` |
-| **L3-B 插槽采集与解析子循环** | `packages/ingest/plugin-sdk` | `SourcePlugin` 可拆卸注册表（内置 Slot + MCP 适配）、`StandardMarkdown` 运行时校验、异步解析子循环契约 |
+| **L3-B 公共能力与插槽解析层** | `packages/capabilities/*` + `packages/ingest/*` | 公共能力（`@zhizhi/cap-mcp-client`、`cap-asr`、`cap-media-frames`）、可拆卸 `SourcePlugin` 注册表（含私有化进程内插件 `plugin-douyin`）、通用 `ingest-pipeline` 与 `StandardMarkdown` 强校验 |
 | **L4 基础设施与存储层** | `packages/infra/{db,storage,jobs}` | Drizzle ORM（PGlite 零 Docker / PostgreSQL 双驱动 + RLS 事务钩子）、LocalFs/S3 对象存储、基于 `async_jobs` 表的持久化队列 |
 | **共享契约层** | `packages/shared/{brand,errors,contracts}` | 品牌 ID、结构化 `ZhizhiError`、Zod Schema（零外部业务依赖，Host 与 Client 共用） |
 
 ## 2. 核心设计铁律（ADR 摘要）
 
 1. **ADR-01 原生多人隔离**：所有数据表与对象键强绑定 `user_id`，本地单人通过默认单账号复用同一套底座。
-2. **ADR-02 插槽式来源插件**：支持进程内插件与外部 MCP Server 双挂载模式，卸载任一插件不阻断主干运行。
+2. **ADR-02 插槽式来源插件**：抖音解析在服务端进程内运行，无需独立容器；保留外部 MCP Server 扩展缝隙，卸载任一插件不阻断主干运行。
 3. **ADR-03 统一 Markdown 中间层 + AI 子循环**：原始输入禁止直入主循环，先经异步子循环转为通过 `StandardMarkdownSchema` 校验的干净文档。
 4. **ADR-04 Git 剥离代码片段**：跨端采集器与子循环仅沉淀架构级抽象 Markdown，脱离原仓库代码快照。
 5. **ADR-05 统一问答入口 + 动态工具裁剪**：`kb_search` / `web_search` 常驻自主路由；`draft_wiki_card` 与各类 `quiz_generate_*` 工具由 UI 开关在每轮请求前硬裁剪。

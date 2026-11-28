@@ -2,7 +2,14 @@
 
 本仓库参考 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的插件化与工程门禁思想，采用全栈 TypeScript Monorepo + Pi Agent（`@earendil-works/pi-agent-core` / `@earendil-works/pi-ai`）构建原生多用户 Agent-Native LLM Wiki 知识系统。
 
-在修改 `packages/` 或 `apps/` 前，先阅读 [docs/architecture.md](docs/architecture.md) 与 [docs/core-guidelines/README.md](docs/core-guidelines/README.md)。完整产品与架构规格文档归档在 `docs/specs/`。
+在修改 `packages/` 或 `apps/` 前，先阅读 [docs/architecture.md](docs/architecture.md) 与 [docs/core-guidelines/README.md](docs/core-guidelines/README.md)。
+
+## 文档分层与留档规范（对标 DeepSeek Harness）
+
+- **`.agents/notes/{proposed,implemented,rejected,archived}/{architecture,feature,bug-fix,simplification,process,testing}/yyyy-mm-dd-topic.md`**：工程执行方案、架构提案与决策记录的唯一权威来源（Agent Notes）。未落地放 `proposed/`（含 `Problem` / `Proposal` / `Alternatives considered` / `Acceptance criteria` / `Risks`）；落地完成后在同一次变更中移入 `implemented/` 并改写为现在时的 `Decision` 与 `Consequences`。
+- **`docs/specs/*.html`**：面向人阅读、评审与拍板决策的可视化方案归档（HTML）。凡需要人集中审阅与做决策的方案，均在此产出一份可离线打开的 HTML 决策稿；Markdown 过程文档原则上由 Agent 维护，不要求人逐篇细读。
+- **`docs/architecture.md`**：仅记录**当前已落地**的五层架构、包映射与扩展缝隙，不在其中保留未实现的计划或进度标注。
+- **`docs/core-guidelines/README.md`**：编号式通用编码规范（`G.*` / `B.*` / `F.*`）。
 
 ## 仓库目录分层
 
@@ -16,8 +23,14 @@ packages/
     db/              Drizzle ORM + 租户上下文 + PGlite(零 Docker)/PostgreSQL 双驱动
     storage/         对象存储 Capability Seam（LocalFs / S3）
     jobs/            基于 async_jobs 表的持久化队列（无 Redis 强制依赖）
+  capabilities/
+    mcp-client/      通用受控 MCP 客户端（Streamable HTTP，供外部 MCP 来源复用）
+    asr/             语音转写 Capability Seam（时间戳对齐与多后端适配）
+    media-frames/    字幕归一化与 FFmpeg 三级重点帧截图兜底
   ingest/
     plugin-sdk/      插槽式来源插件协议（内置 Slot + MCP 适配）与 StandardMarkdown 校验
+    pipeline/        跨平台采集编排、AI 解析子循环与 raw_sources 落库
+    plugin-douyin/   私有化进程内抖音来源插件（无需独立容器）
   agent/
     runtime/         基于 Pi Agent 的主循环编排、动态 Tool 裁剪与 Mock Provider
   client/
@@ -25,9 +38,10 @@ packages/
 apps/
   server/            Hono HTTP + SSE 服务端、鉴权与租户中间件
   web/               React 19 + Vite + Tailwind（6 个预设情境独立页 + PWA 响应式骨架）
+.agents/notes/       DSH 规范 Agent Notes（proposed / implemented / rejected / archived）
 scripts/             可执行静态门禁（pnpm run check）
 deploy/              可选 Docker Compose / 裸机部署模板
-docs/                架构说明、编码规范与历史规格 HTML
+docs/                当前架构说明、编码规范与供人评审拍板的可视化方案 HTML（docs/specs/）
 ```
 
 ## 常用命令

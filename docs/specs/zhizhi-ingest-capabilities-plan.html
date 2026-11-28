@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知枝 Web · 插槽数据源与公共能力域架构方案（抖音 DTK v5 验证版）</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f4ee;
+  --surface: #fffdf9;
+  --surface-alt: #f0f3ee;
+  --ink: #172922;
+  --dim: #495b53;
+  --muted: #6c7c74;
+  --line: #d4dcd0;
+  --line-strong: #b4c2b2;
+  --teal: #1f5e47;
+  --teal-soft: #e4f0ea;
+  --teal-dark: #14362a;
+  --orange: #9c4f21;
+  --orange-soft: #f9ece2;
+  --blue: #22517a;
+  --blue-soft: #e5eff8;
+  --purple: #5b3d7d;
+  --purple-soft: #f0eaf7;
+  --amber-soft: #fff5e3;
+  --amber-line: #e4bd7d;
+  --amber-ink: #7e4400;
+  --red: #9f2d2d;
+  --red-soft: #fbeaea;
+  --serif: "Noto Serif SC", "Songti SC", "STSong", SimSun, Georgia, serif;
+  --sans: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14.5px/1.68 var(--sans);
+}
+a { color: var(--teal); text-underline-offset: 3px; }
+button { font: inherit; cursor: pointer; }
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+pre {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: #16231e;
+  color: #e6f0ea;
+  font: 12.6px/1.62 var(--mono);
+  overflow-x: auto;
+  border: 1px solid #263c33;
+}
+pre .k { color: #8fd9b6; }
+pre .t { color: #9ec5f0; }
+pre .s { color: #f6d09c; }
+pre .c { color: #88a095; }
+
+/* Header */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 253, 249, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 10px clamp(14px, 3vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 16.5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.brand-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--teal-dark);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.topbar nav {
+  display: flex;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.topbar nav a {
+  color: var(--dim);
+  text-decoration: none;
+  font-weight: 600;
+}
+.topbar nav a:hover { color: var(--teal); text-decoration: underline; }
+
+main {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 0 clamp(14px, 3vw, 32px) 72px;
+}
+section[id] { scroll-margin-top: 66px; }
+
+/* Hero */
+.hero {
+  margin-top: 18px;
+  background: linear-gradient(135deg, #132c23 0%, #1c4738 58%, #264d57 100%);
+  color: #fffdf6;
+  border-radius: 14px;
+  padding: clamp(22px, 3.5vw, 38px) clamp(20px, 4vw, 40px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 1fr);
+  gap: 20px 28px;
+  align-items: center;
+}
+.hero-tag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #bfe0ca;
+}
+.hero h1 {
+  font: 800 clamp(24px, 3.5vw, 36px)/1.22 var(--serif);
+  margin: 6px 0 10px;
+}
+.hero p {
+  margin: 0;
+  font-size: 14.3px;
+  color: #e4efe7;
+  max-width: 700px;
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.kpi-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  padding: 11px 14px;
+}
+.kpi-card strong {
+  display: block;
+  font-size: 19px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.kpi-card span {
+  font-size: 11.8px;
+  color: #d3e6d9;
+}
+
+/* Section Headers */
+.sec { margin-top: 38px; }
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.sec-head h2 {
+  font: 800 clamp(20px, 2.4vw, 25px)/1.25 var(--serif);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec-num {
+  font: 800 12px/1 var(--sans);
+  background: var(--teal);
+  color: #fff;
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+.sec-sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* Badges */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.55;
+  white-space: nowrap;
+}
+.tag-teal { background: var(--teal-soft); color: var(--teal); border: 1px solid #b8d4c4; }
+.tag-orange { background: var(--orange-soft); color: var(--orange); border: 1px solid #e6c6b1; }
+.tag-blue { background: var(--blue-soft); color: var(--blue); border: 1px solid #bbd1e5; }
+.tag-purple { background: var(--purple-soft); color: var(--purple); border: 1px solid #d1c2e4; }
+.tag-amber { background: var(--amber-soft); color: var(--amber-ink); border: 1px solid var(--amber-line); }
+.tag-red { background: var(--red-soft); color: var(--red); border: 1px solid #e6b8b8; }
+
+/* Panels & Callouts */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.panel + .panel { margin-top: 14px; }
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.panel-head strong { font-size: 15px; }
+.panel-note { margin: 9px 0 0; font-size: 12.6px; color: var(--muted); }
+
+.callout {
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-line);
+  border-left: 4px solid var(--orange);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #553005;
+  font-size: 13.8px;
+}
+.callout strong { color: #3a1f00; }
+
+.callout-teal {
+  background: var(--teal-soft);
+  border: 1px solid #b8d4c4;
+  border-left: 4px solid var(--teal);
+  color: var(--teal-dark);
+}
+
+/* SVG container */
+.svg-scroll {
+  overflow-x: auto;
+  border: 1px solid #e2e8de;
+  border-radius: 8px;
+  background: #fcfcf8;
+  padding: 10px;
+}
+.svg-scroll svg { display: block; width: 100%; height: auto; min-width: 960px; }
+
+/* Grids & Cards */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.card p { margin: 0; font-size: 13.4px; color: var(--dim); }
+.card ul {
+  margin: 2px 0 0;
+  padding-left: 18px;
+  font-size: 13.2px;
+  color: var(--dim);
+}
+.card li + li { margin-top: 4px; }
+
+.domain-card {
+  border-top: 4px solid var(--teal);
+}
+.domain-card.cap { border-top-color: var(--blue); }
+.domain-card.pipe { border-top-color: var(--orange); }
+.domain-card.agent { border-top-color: var(--purple); }
+
+/* Tables */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.3px;
+}
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e6ece2;
+  vertical-align: top;
+}
+th {
+  background: var(--surface-alt);
+  color: var(--ink);
+  font-weight: 800;
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr.highlight-row td { background: #f2f9f5; }
+.score-pill {
+  display: inline-block;
+  min-width: 52px;
+  text-align: center;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+.score-pill.mid { background: var(--blue-soft); color: var(--blue); }
+.score-pill.low { background: var(--red-soft); color: var(--red); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.tab-btn {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  transition: all 0.15s ease;
+}
+.tab-btn:hover { background: var(--teal-soft); color: var(--teal-dark); }
+.tab-btn.active {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* Steps */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.step {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px 14px;
+  position: relative;
+}
+.step-no {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--teal-dark);
+  color: #fff;
+  margin-bottom: 6px;
+}
+.step h4 { margin: 0 0 6px; font-size: 14px; }
+.step p { margin: 0; font-size: 12.6px; color: var(--dim); }
+
+/* Roadmap */
+.milestone {
+  border-left: 3px solid var(--teal);
+  padding-left: 16px;
+  margin-left: 6px;
+}
+.milestone + .milestone { margin-top: 16px; }
+.milestone h3 {
+  margin: 0 0 6px;
+  font-size: 15.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.milestone ul { margin: 0; padding-left: 18px; font-size: 13.4px; color: var(--dim); }
+.milestone li + li { margin-top: 4px; }
+
+/* Decision cards */
+.decision-box {
+  background: linear-gradient(180deg, #fffdf9 0%, #f3f7f2 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+
+footer {
+  margin-top: 46px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .grid-4 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#top">
+      <span>知枝 Zhizhi</span>
+      <span class="brand-pill">插槽与公共能力域 v1.3</span>
+    </a>
+    <nav>
+      <a href="#sec-domains">四域划分</a>
+      <a href="#sec-flow">端到端流水线</a>
+      <a href="#sec-oss">开源调研矩阵</a>
+      <a href="#sec-contracts">SDK 与能力契约</a>
+      <a href="#sec-monorepo">包目录与门禁</a>
+      <a href="#sec-plan">分阶段实施</a>
+      <a href="#sec-decisions">拍板确认</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <div class="hero-tag">OPEN-SOURCE-FIRST ARCHITECTURE · ADR-02 &amp; ADR-03 验证方案</div>
+      <h1>插槽数据源 × 公共能力域分层方案<br>（抖音 DTK v5 路线 A）</h1>
+      <p>
+        用「抖音分享链接采集」作为首个外部 MCP 插槽验真靶子，把 <strong>平台采集（薄插件）</strong>、
+        <strong>公共基础能力（ASR / 字幕归一化 / 重点帧截图 / MCP 客户端）</strong>、
+        <strong>解析编排子循环</strong> 与 <strong>Pi Agent 主循环工具</strong> 彻底拆清。
+        确保未来接 B 站、小红书、YouTube、本地视频时，零重复开发音视频加工能力，同时严格守住多租户隔离与写库草稿保护红线。
+      </p>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <strong>4 大域解耦</strong>
+        <span>插件域 / 能力域 / 编排域 / Agent 工具域</span>
+      </div>
+      <div class="kpi-card">
+        <strong>DTK v5.1.13</strong>
+        <span>Apache-2.0 · 自愈身份池 · 原生 /mcp/</span>
+      </div>
+      <div class="kpi-card">
+        <strong>0 重复造轮子</strong>
+        <span>B 站/小红书复用 ASR + 字幕定位截图</span>
+      </div>
+      <div class="kpi-card">
+        <strong>零侵入降级</strong>
+        <span>关闭 DTK 或卸载插件不阻断主服务</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 核心原则速览 -->
+  <section class="sec">
+    <div class="callout">
+      <strong>先澄清 2 条不可妥协的红线：</strong>
+      ① 抖音链接采集完成后<strong>不会直接覆写正式知识卡</strong>，而是先产出通过 <code>StandardMarkdownDocumentSchema</code> 校验的文档落入 <code>raw_sources</code>，再走三出口（<code>archive_only</code> 仅归档 / <code>todo_queue</code> 待学清单 / <code>wiki_card</code> 草稿预览 → 用户点击保存后入库并异步出 2 题）。
+      ② 公共能力域（ASR / FFmpeg 抽帧 / MCP 客户端）是<strong>服务端确定性能力缝隙</strong>，<strong>不直接暴露给 Pi Agent 主循环大模型</strong>，防止多租户越权与工具列表膨胀。
+    </div>
+  </section>
+
+  <!-- SECTION 1: 四域划分 -->
+  <section id="sec-domains" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">01</span>四域架构全景：工具域、插件域与主循环如何切边界</h2>
+      <p class="sec-sub">把「平台差异」和「跨平台公共加工」物理隔离，让新增平台插件保持在 ~150 行薄适配层</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <strong>知枝四域分层与数据流总图</strong>
+        <div>
+          <span class="tag tag-teal">Plugin Domain</span>
+          <span class="tag tag-blue">Capability Domain</span>
+          <span class="tag tag-orange">Ingest Pipeline</span>
+          <span class="tag tag-purple">Pi Agent Runtime</span>
+        </div>
+      </div>
+      <div class="svg-scroll">
+        <svg viewBox="0 0 1140 520" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#495b53"/>
+            </marker>
+            <marker id="arrow-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#1f5e47"/>
+            </marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#22517a"/>
+            </marker>
+          </defs>
+
+          <!-- Background Lanes -->
+          <!-- Lane 1: Input & External OSS -->
+          <rect x="14" y="16" width="210" height="484" rx="12" fill="#f6f7f2" stroke="#d4dcd0"/>
+          <text x="30" y="42" font-size="13" font-weight="800" fill="#172922">入口与外部开源 Sidecar</text>
+          <text x="30" y="59" font-size="11" fill="#6c7c74">Existing OSS / 用户输入</text>
+
+          <rect x="28" y="78" width="182" height="78" rx="9" fill="#fffdf9" stroke="#1f5e47" stroke-width="1.5"/>
+          <text x="40" y="101" font-size="13" font-weight="800" fill="#14362a">用户粘贴来源</text>
+          <text x="40" y="120" font-size="11.5" fill="#495b53">抖音口令 / 短链 / 图文</text>
+          <text x="40" y="137" font-size="11.5" fill="#495b53">未来：B 站 / XHS / PDF</text>
+
+          <rect x="28" y="182" width="182" height="148" rx="9" fill="#e4f0ea" stroke="#1f5e47" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <text x="40" y="205" font-size="13" font-weight="800" fill="#14362a">DTK v5.1.13 容器</text>
+          <text x="40" y="222" font-size="11" font-weight="700" fill="#1f5e47">Existing OSS · Apache-2.0</text>
+          <text x="40" y="242" font-size="11.5" fill="#172922">• /mcp/ Streamable HTTP</text>
+          <text x="40" y="260" font-size="11.5" fill="#172922">• 自愈身份池 + 熔断器</text>
+          <text x="40" y="278" font-size="11.5" fill="#172922">• 抖音 / TikTok / B 站</text>
+          <text x="40" y="296" font-size="11.5" fill="#172922">• 离线 FunASR 边车</text>
+          <text x="40" y="314" font-size="11" fill="#495b53">可选部署，挂掉不阻断主干</text>
+
+          <rect x="28" y="354" width="182" height="128" rx="9" fill="#e5eff8" stroke="#22517a" stroke-width="1.2" stroke-dasharray="5 3"/>
+          <text x="40" y="377" font-size="13" font-weight="800" fill="#22517a">其他外部引擎（可替换）</text>
+          <text x="40" y="397" font-size="11.5" fill="#172922">• 系统 FFmpeg 二进制</text>
+          <text x="40" y="415" font-size="11.5" fill="#172922">• 云端 ASR（百炼/硅基）</text>
+          <text x="40" y="433" font-size="11.5" fill="#172922">• 本地 faster-whisper</text>
+          <text x="40" y="451" font-size="11.5" fill="#172922">• 未来：B 站 / 网页 MCP</text>
+          <text x="40" y="469" font-size="11" fill="#495b53">均通过 Capability Seam 接入</text>
+
+          <!-- Lane 2: Plugin Domain + Capability Domain -->
+          <rect x="246" y="16" width="320" height="224" rx="12" fill="#f0f7f3" stroke="#b8d4c4" stroke-width="1.5"/>
+          <text x="262" y="42" font-size="13.5" font-weight="800" fill="#14362a">域 1：来源插件域（Source Plugins）</text>
+          <text x="262" y="59" font-size="11" fill="#1f5e47">packages/ingest/plugin-* · 仅处理平台差异，极薄适配器</text>
+
+          <rect x="262" y="74" width="288" height="44" rx="7" fill="#fffdf9" stroke="#1f5e47"/>
+          <text x="274" y="93" font-size="12.5" font-weight="800" fill="#14362a">@zhizhi/plugin-sdk（协议 + 注册表）</text>
+          <text x="274" y="109" font-size="11" fill="#495b53">match() · healthcheck() · preflight() · extract(runtime)</text>
+
+          <rect x="262" y="128" width="138" height="96" rx="7" fill="#fffdf9" stroke="#1f5e47" stroke-width="1.5"/>
+          <text x="272" y="148" font-size="12.5" font-weight="800" fill="#1f5e47">plugin-douyin-dtk</text>
+          <text x="272" y="165" font-size="11" fill="#172922">mode: 'mcp'</text>
+          <text x="272" y="182" font-size="11" fill="#495b53">• 口令/短链识别</text>
+          <text x="272" y="198" font-size="11" fill="#495b53">• 调 DTK parse/dl</text>
+          <text x="272" y="214" font-size="11" fill="#495b53">• 产 Bundle + 声明</text>
+
+          <rect x="412" y="128" width="138" height="96" rx="7" fill="#fcfcf8" stroke="#b4c2b2" stroke-dasharray="4 3"/>
+          <text x="422" y="148" font-size="12.5" font-weight="800" fill="#495b53">未来插件插槽</text>
+          <text x="422" y="165" font-size="11" fill="#6c7c74">in_process / mcp</text>
+          <text x="422" y="182" font-size="11" fill="#6c7c74">• plugin-bilibili</text>
+          <text x="422" y="198" font-size="11" fill="#6c7c74">• plugin-xiaohongshu</text>
+          <text x="422" y="214" font-size="11" fill="#6c7c74">• plugin-web / pdf</text>
+
+          <!-- Domain 2: Capabilities -->
+          <rect x="246" y="258" width="320" height="242" rx="12" fill="#edf4fb" stroke="#bbd1e5" stroke-width="1.5"/>
+          <text x="262" y="284" font-size="13.5" font-weight="800" fill="#22517a">域 2：公共基础能力域（Capabilities）</text>
+          <text x="262" y="301" font-size="11" fill="#22517a">packages/capabilities/* · 跨平台共享、确定性执行</text>
+
+          <rect x="262" y="316" width="138" height="78" rx="7" fill="#fffdf9" stroke="#22517a"/>
+          <text x="272" y="336" font-size="12" font-weight="800" fill="#22517a">cap-mcp-client</text>
+          <text x="272" y="353" font-size="11" fill="#495b53">Streamable HTTP</text>
+          <text x="272" y="369" font-size="11" fill="#495b53">stdio · 超时 · 鉴权</text>
+          <text x="272" y="385" font-size="11" fill="#495b53">错误→ZhizhiError</text>
+
+          <rect x="412" y="316" width="138" height="78" rx="7" fill="#fffdf9" stroke="#22517a"/>
+          <text x="422" y="336" font-size="12" font-weight="800" fill="#22517a">cap-asr</text>
+          <text x="422" y="353" font-size="11" fill="#495b53">AsrProvider 缝隙</text>
+          <text x="422" y="369" font-size="11" fill="#495b53">DTK / 百炼 / 硅基</text>
+          <text x="422" y="385" font-size="11" fill="#495b53">输出时间戳段落</text>
+
+          <rect x="262" y="406" width="138" height="78" rx="7" fill="#fffdf9" stroke="#22517a"/>
+          <text x="272" y="426" font-size="12" font-weight="800" fill="#22517a">cap-media-frames</text>
+          <text x="272" y="443" font-size="11" fill="#495b53">字幕解析归一化</text>
+          <text x="272" y="459" font-size="11" fill="#495b53">按时间点精准截图</text>
+          <text x="272" y="475" font-size="11" fill="#495b53">等分/封面兜底</text>
+
+          <rect x="412" y="406" width="138" height="78" rx="7" fill="#fffdf9" stroke="#22517a"/>
+          <text x="422" y="426" font-size="12" font-weight="800" fill="#22517a">租户资产落盘</text>
+          <text x="422" y="443" font-size="11" fill="#495b53">复用 @zhizhi/storage</text>
+          <text x="422" y="459" font-size="11" fill="#495b53">u/{userId}/assets/*</text>
+          <text x="422" y="475" font-size="11" fill="#495b53">生成 asset:// 引用</text>
+
+          <!-- Lane 3: Ingest Pipeline & Sub-Loop -->
+          <rect x="590" y="16" width="262" height="484" rx="12" fill="#fcf3ec" stroke="#e6c6b1" stroke-width="1.5"/>
+          <text x="606" y="42" font-size="13.5" font-weight="800" fill="#9c4f21">域 3：解析编排与子循环域</text>
+          <text x="606" y="59" font-size="11" fill="#9c4f21">packages/ingest/pipeline · DbJobQueue</text>
+
+          <rect x="606" y="78" width="230" height="62" rx="8" fill="#fffdf9" stroke="#9c4f21"/>
+          <text x="618" y="99" font-size="12.5" font-weight="800" fill="#9c4f21">① 接收 RawExtractedBundle</text>
+          <text x="618" y="117" font-size="11" fill="#495b53">检查已有 transcript / mediaRef</text>
+          <text x="618" y="132" font-size="11" fill="#495b53">决定是否触发 ASR 与重点截图</text>
+
+          <rect x="606" y="156" width="230" height="76" rx="8" fill="#fffdf9" stroke="#9c4f21"/>
+          <text x="618" y="177" font-size="12.5" font-weight="800" fill="#9c4f21">② 字幕优先 + 重点帧规划</text>
+          <text x="618" y="195" font-size="11" fill="#495b53">平台字幕 → 插件转写 → 公共 ASR</text>
+          <text x="618" y="211" font-size="11" fill="#495b53">子循环挑 3~6 个关键时间点截图</text>
+          <text x="618" y="226" font-size="11" fill="#495b53">失败自动退回等分/封面图兜底</text>
+
+          <rect x="606" y="248" width="230" height="72" rx="8" fill="#fffdf9" stroke="#9c4f21"/>
+          <text x="618" y="269" font-size="12.5" font-weight="800" fill="#9c4f21">③ AI 解析子循环（无状态）</text>
+          <text x="618" y="287" font-size="11" fill="#495b53">调用 runPiSubLoopTask()</text>
+          <text x="618" y="303" font-size="11" fill="#495b53">去口语废话、整理结构、内嵌图注</text>
+
+          <rect x="606" y="336" width="230" height="66" rx="8" fill="#fffdf9" stroke="#1f5e47" stroke-width="1.5"/>
+          <text x="618" y="357" font-size="12.5" font-weight="800" fill="#14362a">④ StandardMarkdown 强校验</text>
+          <text x="618" y="375" font-size="11" fill="#495b53">buildAndValidateStandardMarkdown</text>
+          <text x="618" y="391" font-size="11" fill="#495b53">回填 assets[] + userId 租户落库</text>
+
+          <rect x="606" y="418" width="230" height="66" rx="8" fill="#fff5e3" stroke="#e4bd7d"/>
+          <text x="618" y="439" font-size="12.5" font-weight="800" fill="#7e4400">⑤ 写入 raw_sources + 三出口</text>
+          <text x="618" y="457" font-size="11" fill="#553005">archive_only / todo_queue /</text>
+          <text x="618" y="473" font-size="11" fill="#553005">wiki_card（仅出草稿，不直接覆写）</text>
+
+          <!-- Lane 4: Pi Agent Tool Domain -->
+          <rect x="876" y="16" width="250" height="484" rx="12" fill="#f5f0fa" stroke="#d1c2e4" stroke-width="1.5"/>
+          <text x="892" y="42" font-size="13.5" font-weight="800" fill="#5b3d7d">域 4：Pi Agent 主循环工具域</text>
+          <text x="892" y="59" font-size="11" fill="#5b3d7d">packages/agent/runtime · 确定性裁剪</text>
+
+          <rect x="892" y="84" width="218" height="106" rx="8" fill="#fffdf9" stroke="#5b3d7d"/>
+          <text x="904" y="105" font-size="12.5" font-weight="800" fill="#5b3d7d">常驻核心 Tools</text>
+          <text x="904" y="124" font-size="11.5" fill="#172922">• kb_search（读 Markdown）</text>
+          <text x="904" y="142" font-size="11.5" fill="#172922">• web_search（联网兜底）</text>
+          <text x="904" y="160" font-size="11.5" fill="#172922">• canvas_dispatch（受 Pin 保护）</text>
+          <text x="904" y="178" font-size="11" fill="#6c7c74">• [可选] ingest_source_url（仅投队列）</text>
+
+          <rect x="892" y="210" width="218" height="122" rx="8" fill="#fffdf9" stroke="#5b3d7d"/>
+          <text x="904" y="231" font-size="12.5" font-weight="800" fill="#5b3d7d">UI 开关硬裁剪 Tools</text>
+          <text x="904" y="250" font-size="11.5" fill="#172922">• draft_wiki_card（草稿预览）</text>
+          <text x="904" y="268" font-size="11.5" fill="#172922">• quiz_generate_mcq / tf</text>
+          <text x="904" y="286" font-size="11.5" fill="#172922">• quiz_generate_blank / qa</text>
+          <text x="904" y="304" font-size="11" fill="#6c7c74">关闭即从白名单移除，模型不可见</text>
+          <text x="904" y="320" font-size="11" fill="#6c7c74">用户点「保存」后才正式入 wiki_cards</text>
+
+          <rect x="892" y="352" width="218" height="132" rx="8" fill="#fbeaea" stroke="#e6b8b8"/>
+          <text x="904" y="373" font-size="12.5" font-weight="800" fill="#9f2d2d">严格禁止进入主循环</text>
+          <text x="904" y="393" font-size="11.5" fill="#6a1f1f">✕ 裸 Shell / Bash / 文件系统写入</text>
+          <text x="904" y="411" font-size="11.5" fill="#6a1f1f">✕ DTK API Key / 平台 Cookie</text>
+          <text x="904" y="429" font-size="11.5" fill="#6a1f1f">✕ FFmpeg / 下载器原始命令</text>
+          <text x="904" y="447" font-size="11.5" fill="#6a1f1f">✕ 未校验的原始网页 / 杂乱 HTML</text>
+          <text x="904" y="467" font-size="11" fill="#9f2d2d">防止 Prompt 注入与多租户越权</text>
+
+          <!-- Connectors -->
+          <line x1="210" y1="116" x2="258" y2="116" stroke="#1f5e47" stroke-width="1.8" marker-end="url(#arrow-teal)"/>
+          <line x1="210" y1="226" x2="258" y2="180" stroke="#1f5e47" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow-teal)"/>
+          <line x1="210" y1="354" x2="258" y2="354" stroke="#22517a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow-blue)"/>
+
+          <!-- Plugin to Pipeline -->
+          <line x1="566" y1="110" x2="602" y2="110" stroke="#495b53" stroke-width="1.8" marker-end="url(#arrow)"/>
+          <!-- Pipeline to Capabilities bidirectional -->
+          <line x1="606" y1="196" x2="570" y2="355" stroke="#22517a" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+          <line x1="570" y1="435" x2="602" y2="365" stroke="#22517a" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+          <!-- Pipeline internal arrows -->
+          <line x1="721" y1="140" x2="721" y2="152" stroke="#9c4f21" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="721" y1="232" x2="721" y2="244" stroke="#9c4f21" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="721" y1="320" x2="721" y2="332" stroke="#9c4f21" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="721" y1="402" x2="721" y2="414" stroke="#9c4f21" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <!-- Pipeline to Agent -->
+          <line x1="836" y1="450" x2="888" y2="140" stroke="#5b3d7d" stroke-width="1.8" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
+      <p class="panel-note">
+        关键设计收益：<strong>抖音插件只做「口令识别 + 调 DTK MCP + 数据映射」</strong>；字幕解析、无字幕 ASR 补齐、字幕时间轴定位重点截图、对象存储隔离、AI 解析子循环全部沉淀在公共层，B 站/小红书/YouTube 插件接入时直接零成本复用。
+      </p>
+    </div>
+
+    <div class="grid-4" style="margin-top: 14px;">
+      <div class="card domain-card">
+        <div class="card-top">
+          <h3>1. 来源插件域</h3>
+          <span class="tag tag-teal">Plugin</span>
+        </div>
+        <p><strong>只管「这个平台怎么拿原料」</strong></p>
+        <ul>
+          <li>识别 URL / 分享口令</li>
+          <li>调平台原生协议或外部 MCP</li>
+          <li>返回元信息、原生字幕、媒体引用或图集</li>
+          <li>通过标记告诉管线「缺不缺 ASR / 截图」</li>
+        </ul>
+      </div>
+
+      <div class="card domain-card cap">
+        <div class="card-top">
+          <h3>2. 公共能力域</h3>
+          <span class="tag tag-blue">Capability</span>
+        </div>
+        <p><strong>跨平台共享的确定性底座</strong></p>
+        <ul>
+          <li><code>cap-mcp-client</code>：HTTP/stdio MCP</li>
+          <li><code>cap-asr</code>：可插拔语音转写（带时间戳）</li>
+          <li><code>cap-media-frames</code>：字幕清洗 + 定向截图</li>
+          <li><code>storage</code>：<code>u/{userId}/assets/*</code> 隔离</li>
+        </ul>
+      </div>
+
+      <div class="card domain-card pipe">
+        <div class="card-top">
+          <h3>3. 解析编排域</h3>
+          <span class="tag tag-orange">Pipeline</span>
+        </div>
+        <p><strong>把原料洗成标准 Markdown</strong></p>
+        <ul>
+          <li>运行在 <code>DbJobQueue</code> 异步队列</li>
+          <li>按策略编排「字幕 → ASR → 截图 → 子循环」</li>
+          <li>执行 <code>StandardMarkdownSchema</code> 强校验</li>
+          <li>落 <code>raw_sources</code> 并按三出口分流</li>
+        </ul>
+      </div>
+
+      <div class="card domain-card agent">
+        <div class="card-top">
+          <h3>4. Agent 工具域</h3>
+          <span class="tag tag-purple">Pi Agent</span>
+        </div>
+        <p><strong>主对话循环的克制白名单</strong></p>
+        <ul>
+          <li>仅消费已净化的 <code>StandardMarkdown</code></li>
+          <li>按 UI 开关每轮硬裁剪 Tools</li>
+          <li>制卡必须先投递 <code>wiki_draft_diff</code> 预览</li>
+          <li>零 Shell、零爬虫凭证暴露</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: 端到端流水线（含重点截图兜底） -->
+  <section id="sec-flow" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">02</span>视频 / 图文通用 5 步流水线与「字幕定位重点截图」兜底策略</h2>
+      <p class="sec-sub">所有视频类来源（抖音、B 站、YouTube、本地视频）共用同一条降级容错链路</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-no">STEP 1 · 平台提取</span>
+        <h4>抖音插件调用 DTK v5</h4>
+        <p><code>match()</code> 识别口令/短链 → 调 DTK <code>parse_url</code>。若是图文，直接拉原图进 <code>binaryAssets</code> 跳过 ASR；若是视频，调 <code>download_media</code> 获取媒体引用。</p>
+      </div>
+      <div class="step">
+        <span class="step-no">STEP 2 · 字幕/ASR</span>
+        <h4>字幕优先，按需补齐</h4>
+        <p>按优先级：<strong>平台官方字幕 → DTK 离线 FunASR → 公共 <code>AsrProvider</code></strong>（百炼 / 硅基 / faster-whisper），统一归一化为 <code>TranscriptSegment[]</code>。</p>
+      </div>
+      <div class="step">
+        <span class="step-no">STEP 3 · 重点截图</span>
+        <h4>字幕定位 + 三级兜底</h4>
+        <p>子循环读带时间戳文稿，选 3~6 个关键时间点（如图表/公式/结论）交 <code>FFmpeg</code> 精准截帧；<strong>无时间戳则等分 3 帧</strong>；无视频流则退回封面图。</p>
+      </div>
+      <div class="step">
+        <span class="step-no">STEP 4 · 子循环洗稿</span>
+        <h4>独立 LLM 生成标准 MD</h4>
+        <p>把图集/关键帧按 <code>u/{userId}/assets/*</code> 落盘为 <code>asset://</code>，再调 <code>runPiSubLoopTask()</code> 产出带出处、图注、时间锚点与候选主题的 Markdown。</p>
+      </div>
+      <div class="step">
+        <span class="step-no">STEP 5 · 校验与出口</span>
+        <h4>落 raw_sources 走三出口</h4>
+        <p><code>StandardMarkdownDocumentSchema</code> 强校验 → 写 <code>raw_sources</code> → 按 <code>disposition</code> 进仅归档、待学队列，或生成<strong>知识卡草稿</strong>待用户确认保存。</p>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top: 14px;">
+      <div class="panel-head">
+        <strong>字幕定位重点截图 · 三级确定性降级表（B 站 / 抖音 / YouTube 通用）</strong>
+        <span class="tag tag-blue">packages/capabilities/media-frames</span>
+      </div>
+      <div class="table-wrap" style="border:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>降级档位</th>
+              <th>触发条件</th>
+              <th>执行策略</th>
+              <th>产出质量与成本</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="highlight-row">
+              <td><span class="tag tag-teal">L1 精准定位（最优）</span></td>
+              <td>存在带 <code>startSec/endSec</code> 的字幕或时间戳 ASR，且有可读取的视频流/本地文件</td>
+              <td>子循环先读字幕 JSON，输出 3~6 个 <code>{ timestampSec, caption }</code> → FFmpeg <code>-ss</code> 精准定向抽帧转 WebP</td>
+              <td>图配文高度贴合，仅 3~6 张图，不耗多模态大模型逐帧 Token</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-amber">L2 均匀抽帧兜底</span></td>
+              <td>仅有整段纯文本（如 DTK 默认 FunASR 无时间戳输出），但有视频流与总时长</td>
+              <td>跳过首尾片头片尾（15% / 50% / 85% 分位点）等分抽取 3 张代表帧</td>
+              <td>零额外 ASR 成本，保证知识卡有基本画面参考</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-orange">L3 封面/图集兜底</span></td>
+              <td>仅音频、无视频下载权限、或 FFmpeg 未安装/执行失败</td>
+              <td>视频退回下载 <code>cover_url</code> 单图；图文笔记直接保留全部无水印原图</td>
+              <td>永不因截图失败导致整条采集任务崩溃，主干高可用</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: 开源生态调研与路线 A 依据 -->
+  <section id="sec-oss" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">03</span>Open Source Landscape：为什么选路线 A（DTK v5）</h2>
+      <p class="sec-sub">基于 2026-11-28 GitHub 实时检索与源码/许可证核验结果</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>开源项目</th>
+            <th>核心能力覆盖</th>
+            <th>许可证</th>
+            <th>活跃度</th>
+            <th>复用决策</th>
+            <th>评分</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td><strong>Evil0ctal/Douyin_TikTok_Download_API</strong><br><code>v5.1.13</code> · 21.6k★</td>
+            <td>抖音/TikTok/B 站解析、无水印下载、评论、CloakBrowser 自愈身份池、熔断器、离线 FunASR、<strong>原生 Streamable HTTP <code>/mcp/</code></strong>（10 工具，不暴露凭证）</td>
+            <td><span class="tag tag-teal">Apache-2.0</span></td>
+            <td>2026-11-20<br>极活跃</td>
+            <td><span class="tag tag-teal">Integrate（主选）</span><br>作为外部 MCP Sidecar</td>
+            <td><span class="score-pill">88 / 100</span></td>
+          </tr>
+          <tr>
+            <td><strong>suonian/vidknot</strong><br><code>v0.6.14</code> · 570 测试</td>
+            <td>11+ 平台解析、抖音 4 层 fallback、双 ASR 交叉校验、两段式纯采集 MCP（<code>video_material</code> 不调 LLM）</td>
+            <td><span class="tag tag-teal">MIT</span></td>
+            <td>2026-11-18<br>高活跃</td>
+            <td><span class="tag tag-blue">备选（零 Docker）</span><br>但抖音需 2-4 周换 Cookie</td>
+            <td><span class="score-pill mid">82 / 100</span></td>
+          </tr>
+          <tr>
+            <td><strong>HuangYincan/VideoNote-MCP</strong><br><code>v0.2.7</code> · 1606 测试</td>
+            <td>抖音/B 站/YouTube/小红书、字幕优先 + 本地 ASR + 关键帧、<code>prepare_note_material</code> 不调 LLM</td>
+            <td><span class="tag tag-teal">MIT</span></td>
+            <td>2026-10-21<br>高活跃</td>
+            <td><span class="tag tag-blue">参考 / 备选</span><br>仅 stdio + 抖音需本机扫码</td>
+            <td><span class="score-pill mid">80 / 100</span></td>
+          </tr>
+          <tr>
+            <td><strong>ucmao/media-parser</strong><br>50 平台纯协议</td>
+            <td>移动端 Feed 免 Cookie 解析、图文 LivePhoto、抖音原生 AI 字幕提取</td>
+            <td><span class="tag tag-teal">MIT</span></td>
+            <td>⚠️ 公告 2027-01-01 前停更删源码</td>
+            <td><span class="tag tag-amber">Reference</span><br>仅借鉴协议思路，不依赖原仓</td>
+            <td><span class="score-pill mid">74 / 100</span></td>
+          </tr>
+          <tr>
+            <td><strong>MediaCrawler / EchoLens / Douyin-Watermark-Free-Parser</strong></td>
+            <td>批量爬虫 / TS+Hono 解析器 / 语料工作台</td>
+            <td><span class="tag tag-red">禁商用 / GPL-3.0</span></td>
+            <td>活跃</td>
+            <td><span class="tag tag-red">Reject</span><br>许可证红线或强传染</td>
+            <td><span class="score-pill low">≤ 42</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-teal" style="margin-top: 12px;">
+      <strong>为什么路线 A 顺带给 B 站铺了路？</strong>
+      DTK v5.1.6+ 已原生支持 <strong>抖音 + TikTok + B 站</strong>（含纯 Python WBI 签名与免浏览器 B 站游客身份池）。只要我们在知枝把 <code>cap-mcp-client</code> + <code>cap-asr</code> + <code>cap-media-frames</code> + <code>ingest-pipeline</code> 搭完，后续接 B 站时：既可以复用 DTK，也可以无缝挂 B 站原生字幕插件，整个下游加工链 100% 复用。
+    </div>
+  </section>
+
+  <!-- SECTION 4: 契约与代码接口设计（交互 Tabs） -->
+  <section id="sec-contracts" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">04</span>核心接口契约设计（增量兼容现有 plugin-sdk）</h2>
+      <p class="sec-sub">点击下方标签切换查看「插件域契约」「公共能力域契约」「DTK v5 抖音插件映射」「架构门禁来源表」</p>
+    </div>
+
+    <div class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="tab-sdk" type="button">1. 升级后的 SourcePlugin 契约</button>
+        <button class="tab-btn" data-tab="tab-cap" type="button">2. 公共能力域 Seam 接口</button>
+        <button class="tab-btn" data-tab="tab-dtk" type="button">3. 抖音插件 × DTK v5 映射</button>
+        <button class="tab-btn" data-tab="tab-gate" type="button">4. 架构门禁来源清单</button>
+      </div>
+
+      <div id="tab-sdk" class="tab-pane active">
+<pre><span class="c">// packages/ingest/plugin-sdk/src/index.ts（向后兼容现有接口的最小增量扩展）</span>
+
+<span class="k">export type</span> <span class="t">IngestStage</span> =
+  | <span class="s">'matching'</span> | <span class="s">'fetching_meta'</span> | <span class="s">'downloading_media'</span>
+  | <span class="s">'transcribing'</span> | <span class="s">'extracting_frames'</span> | <span class="s">'storing_assets'</span> | <span class="s">'sub_loop'</span>
+
+<span class="k">export interface</span> <span class="t">TranscriptSegment</span> {
+  <span class="k">readonly</span> startSec: <span class="t">number</span>
+  <span class="k">readonly</span> endSec: <span class="t">number</span>
+  <span class="k">readonly</span> text: <span class="t">string</span>
+  <span class="k">readonly</span> speaker?: <span class="t">string</span>
+}
+
+<span class="k">export interface</span> <span class="t">MediaSourceRef</span> {
+  <span class="k">readonly</span> kind: <span class="s">'video'</span> | <span class="s">'audio'</span>
+  <span class="k">readonly</span> localPath?: <span class="t">string</span>
+  <span class="k">readonly</span> remoteUrl?: <span class="t">string</span>
+  <span class="k">readonly</span> downloadHeaders?: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">string</span>&gt;
+  <span class="k">readonly</span> durationSec?: <span class="t">number</span>
+}
+
+<span class="k">export interface</span> <span class="t">RawExtractedBundle</span> {
+  <span class="k">readonly</span> title: <span class="t">string</span>
+  <span class="k">readonly</span> originKind: <span class="t">string</span>
+  <span class="k">readonly</span> originLabel: <span class="t">string</span>
+  <span class="k">readonly</span> originUrl?: <span class="t">string</span>
+  <span class="k">readonly</span> anchors: <span class="t">string</span>[]
+  <span class="k">readonly</span> rawBody: <span class="t">string</span>
+  <span class="k">readonly</span> candidateTopics?: <span class="t">string</span>[]
+  <span class="k">readonly</span> binaryAssets?: <span class="t">RawBinaryAsset</span>[]
+  <span class="c">// 新增：让插件声明已拿到的字幕/媒体，缺项交由公共能力域自动补齐</span>
+  <span class="k">readonly</span> transcript?: <span class="k">readonly</span> <span class="t">TranscriptSegment</span>[]
+  <span class="k">readonly</span> mediaRef?: <span class="t">MediaSourceRef</span>
+  <span class="k">readonly</span> needsAsr?: <span class="t">boolean</span>
+  <span class="k">readonly</span> needsKeyframes?: <span class="t">boolean</span>
+}
+
+<span class="k">export interface</span> <span class="t">SourcePlugin</span> {
+  <span class="c">// ...保留 pluginId / displayName / mode / supportedTypes / urlPatterns / mimeTypes / needsSubLoop</span>
+  match?(input: <span class="t">RawIngestInput</span>): <span class="t">boolean</span> <span class="c">// 解决「抖音带中文口令分享文本」的精准路由</span>
+  healthcheck(): <span class="t">Promise</span>&lt;{ ok: <span class="t">boolean</span>; detail?: <span class="t">string</span> }&gt;
+  preflight(input: <span class="t">RawIngestInput</span>, tenant: <span class="t">TenantContext</span>): <span class="t">Promise</span>&lt;<span class="t">PreflightEstimate</span>&gt;
+  extract(
+    input: <span class="t">RawIngestInput</span>,
+    tenant: <span class="t">TenantContext</span>,
+    runtime?: <span class="t">PluginExtractRuntime</span>, <span class="c">// 透传 AbortSignal + onProgress + 共享能力注册表</span>
+  ): <span class="t">Promise</span>&lt;<span class="t">RawExtractedBundle</span>&gt;
+}</pre>
+      </div>
+
+      <div id="tab-cap" class="tab-pane">
+<pre><span class="c">// 1. packages/capabilities/mcp-client —— 统一外部 MCP 协议接入</span>
+<span class="k">export interface</span> <span class="t">McpClientHandle</span> {
+  callTool&lt;<span class="t">T</span>&gt;(name: <span class="t">string</span>, args: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">unknown</span>&gt;, signal?: <span class="t">AbortSignal</span>): <span class="t">Promise</span>&lt;<span class="t">T</span>&gt;
+  listTools(): <span class="t">Promise</span>&lt;<span class="t">string</span>[]&gt;
+  ping(): <span class="t">Promise</span>&lt;{ ok: <span class="t">boolean</span>; latencyMs: <span class="t">number</span>; detail?: <span class="t">string</span> }&gt;
+  close(): <span class="t">Promise</span>&lt;<span class="t">void</span>&gt;
+}
+
+<span class="c">// 2. packages/capabilities/asr —— 可插拔语音转写缝隙（抖音 / B站 / 播客通用）</span>
+<span class="k">export interface</span> <span class="t">AsrProvider</span> {
+  <span class="k">readonly</span> providerId: <span class="t">string</span>
+  <span class="k">readonly</span> supportsTimestamps: <span class="t">boolean</span>
+  healthcheck(): <span class="t">Promise</span>&lt;{ ok: <span class="t">boolean</span>; detail?: <span class="t">string</span> }&gt;
+  transcribe(req: {
+    media: <span class="t">MediaSourceRef</span>
+    languageHint?: <span class="t">string</span>
+    signal?: <span class="t">AbortSignal</span>
+  }): <span class="t">Promise</span>&lt;{ fullText: <span class="t">string</span>; segments: <span class="t">TranscriptSegment</span>[] }&gt;
+}
+
+<span class="c">// 3. packages/capabilities/media-frames —— 字幕清洗 + FFmpeg 定向重点帧截图</span>
+<span class="k">export interface</span> <span class="t">KeyframeExtractor</span> {
+  extractAtTimestamps(req: {
+    media: <span class="t">MediaSourceRef</span>
+    targets: <span class="k">readonly</span> { timestampSec: <span class="t">number</span>; caption: <span class="t">string</span> }[]
+    fallbackCoverUrl?: <span class="t">string</span>
+    signal?: <span class="t">AbortSignal</span>
+  }): <span class="t">Promise</span>&lt;<span class="t">RawBinaryAsset</span>[]&gt;
+}</pre>
+      </div>
+
+      <div id="tab-dtk" class="tab-pane">
+<pre><span class="c">// packages/ingest/plugin-douyin-dtk —— 路线 A 薄适配层与 DTK v5 MCP 工具映射</span>
+
+1. <span class="k">healthcheck()</span>
+   └─ 调用 DTK MCP: <span class="s">pool_status</span>（零消耗身份池）
+   └─ 若未配置 DTK_MCP_URL 或连接超时 → 返回 { ok: false, detail: <span class="s">'DTK sidecar offline'</span> }（绝不抛错阻断主服务）
+
+2. <span class="k">match(input)</span>
+   └─ 校验 input.url 或 input.rawText 是否包含 v.douyin.com / douyin.com/(video|note|jingxuan)
+
+3. <span class="k">extract(input, tenant, runtime)</span>
+   ├─ 阶段 fetching_meta (15%): 调用 DTK MCP <span class="s">parse_url({ url })</span>
+   │   ├─ 若返回 status=<span class="s">'pending'</span> → 自动轮询 <span class="s">get_task_result({ task_id })</span>（支持 AbortSignal 取消）
+   │   └─ 拿到归一化 metadata：aweme_id / title / desc / author / type(video|gallery) / cover / images[]
+   ├─ 若为 <span class="k">图文笔记 (gallery)</span>:
+   │   └─ 下载无水印原图进 binaryAssets，设置 needsAsr: false, needsKeyframes: false，直接返回 Bundle
+   └─ 若为 <span class="k">短视频 (video)</span>:
+       ├─ 阶段 downloading_media (40%): 调用 DTK MCP <span class="s">download_media({ platform: 'douyin', content_id })</span>
+       ├─ 阶段 transcribing (70%):
+       │   ├─ 若 DTK 已启用 FunASR 且未强制要求逐句时间戳 → 调 <span class="s">transcribe_video({ download_id })</span>
+       │   └─ 否则返回 mediaRef + <span class="k">needsAsr: true</span>，交由知枝公共 <span class="t">AsrProvider</span> 产出带时间戳段落
+       └─ 设置 <span class="k">needsKeyframes: true</span>，由公共管线完成「重点帧定位 + 兜底截图 + 资产落盘 + AI 子循环」</pre>
+      </div>
+
+      <div id="tab-gate" class="tab-pane">
+        <div class="table-wrap" style="border:none;">
+          <table>
+            <thead>
+              <tr>
+                <th>组件</th>
+                <th>来源分类</th>
+                <th>归属 / 位置</th>
+                <th>说明与自研理由</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>抖音采集、签名、自愈身份池、离线 FunASR</td>
+                <td><span class="tag tag-teal">Existing OSS</span></td>
+                <td><code>deploy/docker-compose.dtk.yml</code></td>
+                <td><code>Evil0ctal/Douyin_TikTok_Download_API</code> v5.1.13（Apache-2.0），隔离在独立容器</td>
+              </tr>
+              <tr>
+                <td>MCP 协议传输底层</td>
+                <td><span class="tag tag-teal">Existing OSS</span></td>
+                <td><code>@modelcontextprotocol/sdk</code></td>
+                <td>官方 TypeScript MCP SDK（MIT），支持 Streamable HTTP 与 stdio</td>
+              </tr>
+              <tr>
+                <td>视频帧抽取与音频转码</td>
+                <td><span class="tag tag-teal">Existing OSS</span></td>
+                <td>系统 <code>ffmpeg</code> / <code>ffprobe</code></td>
+                <td>行业标准媒体工具，通过受控子进程封装</td>
+              </tr>
+              <tr>
+                <td>公共能力域 3 个缝隙包</td>
+                <td><span class="tag tag-purple">New Custom Code</span></td>
+                <td><code>packages/capabilities/{mcp-client,asr,media-frames}</code></td>
+                <td>对齐知枝 <code>ZhizhiError</code>、<code>AbortSignal</code> 与 <code>StandardAssetRef</code> 的薄封装，跨平台共享</td>
+              </tr>
+              <tr>
+                <td>抖音插件适配器</td>
+                <td><span class="tag tag-purple">New Custom Code</span></td>
+                <td><code>packages/ingest/plugin-douyin-dtk</code></td>
+                <td>极薄的平台路由 + DTK MCP 响应映射器，验证 ADR-02 插槽</td>
+              </tr>
+              <tr>
+                <td>通用解析编排与子循环</td>
+                <td><span class="tag tag-purple">New Custom Code</span></td>
+                <td><code>packages/ingest/pipeline</code></td>
+                <td>知枝核心差异化：多租户资产落盘、字幕定位截图、<code>runPiSubLoopTask</code> 与 <code>raw_sources</code> 落库</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: Monorepo 目录与静态门禁 -->
+  <section id="sec-monorepo" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">05</span>Monorepo 分层布局与仓库静态门禁对齐</h2>
+      <p class="sec-sub">零破坏现有 5 条静态门禁，同步收紧 Client/Shared 双面隔离边界</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head">
+          <strong>新增包结构规划</strong>
+          <span class="tag tag-teal">pnpm workspace</span>
+        </div>
+<pre>packages/
+  shared/
+    brand/                   <span class="c"># 品牌 ID（零依赖）</span>
+    errors/                  <span class="c"># ZhizhiError</span>
+    contracts/               <span class="c"># StandardMarkdown / Quiz / SSE Zod</span>
+  infra/
+    db/                      <span class="c"># Drizzle + PGlite/PG + withTenant</span>
+    storage/                 <span class="c"># LocalFs / S3 (u/{userId}/assets/*)</span>
+    jobs/                    <span class="c"># DbJobQueue (ingest_sub_loop)</span>
+  <span class="k">capabilities/</span>              <span class="c"># 【新增】公共基础能力域（仅依赖 shared + infra）</span>
+    <span class="k">mcp-client/</span>              <span class="c"># @zhizhi/cap-mcp-client</span>
+    <span class="k">asr/</span>                     <span class="c"># @zhizhi/cap-asr</span>
+    <span class="k">media-frames/</span>            <span class="c"># @zhizhi/cap-media-frames（字幕+抽帧）</span>
+  ingest/                    <span class="c"># 来源插件域 + 编排域（依赖 shared + infra + cap）</span>
+    plugin-sdk/              <span class="c"># @zhizhi/plugin-sdk（增量升级）</span>
+    <span class="k">pipeline/</span>                <span class="c"># @zhizhi/ingest-pipeline</span>
+    <span class="k">plugin-douyin-dtk/</span>       <span class="c"># @zhizhi/plugin-douyin-dtk（路线 A）</span>
+  agent/runtime/             <span class="c"># Pi Agent 主循环（保持纯粹）</span>
+  client/core/               <span class="c"># 零 DOM 前端通信</span>
+deploy/
+  <span class="k">docker-compose.dtk.yml</span>     <span class="c"># 可选 DTK v5 边车编排</span></pre>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <strong>工程红线与门禁同步项</strong>
+          <span class="tag tag-orange">pnpm run check:all</span>
+        </div>
+        <div class="card" style="border:none; padding:0; background:transparent;">
+          <ul>
+            <li><strong>双面隔离门禁（<code>scripts/verify-workspace-deps.ts</code>）</strong>：把 <code>@zhizhi/cap-*</code>、<code>@zhizhi/ingest-pipeline</code>、<code>@zhizhi/plugin-*</code> 加入 <code>FORBIDDEN_FOR_CLIENT</code> 与 <code>FORBIDDEN_FOR_SHARED</code>，杜绝前端与共享契约反向依赖。</li>
+            <li><strong>租户隔离门禁（<code>scripts/verify-tenant-scope.ts</code>）</strong>：<code>raw_sources</code> 写入与查询严格走 <code>withTenant(db, tenant, ...)</code>；所有图片/截图通过 <code>StorageProvider.put(tenant.userId, ...)</code> 落盘。</li>
+            <li><strong>凭证隔离</strong>：<code>DTK_API_KEY</code> 与 ASR Key 仅存在于后端环境变量或 <code>user_api_keys</code> 加密表，绝不透传给前端或 Pi Agent 对话上下文。</li>
+            <li><strong>类型安全</strong>：零 <code>as unknown</code>、零空 <code>catch {}</code>，DTK MCP 返回的非受控 JSON 必须经 Zod Schema 校验后再进入内部类型流（遵守 Core Guidelines G.1）。</li>
+            <li><strong>零 Docker 本地可跑</strong>：未配置 <code>DTK_MCP_URL</code> 时，<code>pnpm dev</code> 与 <code>pnpm test</code> 全部使用 Mock / 可选降级，不强依赖 Docker。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: 分阶段实施路线 -->
+  <section id="sec-plan" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">06</span>三阶段实施与验收计划（M1 → M2 → M3）</h2>
+      <p class="sec-sub">小步推进，每阶段都有自动化测试与可观测验收标准</p>
+    </div>
+
+    <div class="panel">
+      <div class="milestone">
+        <h3>M1 · 四域底座与公共管线（纯本地 Mock 闭环） <span class="tag tag-teal">可无 Docker 全绿 CI</span></h3>
+        <ul>
+          <li>升级 <code>@zhizhi/plugin-sdk</code>：补齐 <code>match()</code>、<code>PluginExtractRuntime</code>（含 <code>AbortSignal</code> 与进度回调）、<code>TranscriptSegment</code>、<code>MediaSourceRef</code>，并修复 <code>buildAndValidateStandardMarkdown</code> 的 <code>assets</code> 回填。</li>
+          <li>搭建公共能力域：<code>@zhizhi/cap-mcp-client</code>、<code>@zhizhi/cap-asr</code>、<code>@zhizhi/cap-media-frames</code>（含字幕解析与三级抽帧兜底）。</li>
+          <li>搭建 <code>@zhizhi/ingest-pipeline</code> 并注册到 <code>DbJobQueue('ingest_sub_loop')</code>，写完整的单元测试覆盖「视频+时间戳截图」「视频无时间戳等分兜底」「图文直落盘」「租户隔离」。</li>
+          <li>同步更新 <code>scripts/verify-workspace-deps.ts</code>，跑通 <code>pnpm run check:all</code>。</li>
+        </ul>
+      </div>
+
+      <div class="milestone">
+        <h3>M2 · 抖音插件（路线 A）与服务端采集 API <span class="tag tag-blue">打通 HTTP + 异步队列</span></h3>
+        <ul>
+          <li>实现 <code>@zhizhi/plugin-douyin-dtk</code>：通过 <code>@zhizhi/cap-mcp-client</code> 调用 DTK v5 的 <code>pool_status</code> / <code>parse_url</code> / <code>download_media</code> / <code>transcribe_video</code> / <code>get_task_result</code>，并用 Zod 校验全部 MCP 响应。</li>
+          <li>提供 <code>deploy/docker-compose.dtk.yml</code> 与环境变量说明（<code>DTK_MCP_URL</code>、<code>DTK_API_KEY</code>）。</li>
+          <li>在 <code>apps/server</code> 新增 4 个租户隔离接口：
+            <code>POST /api/v1/sources/ingest</code>（投递队列返回 <code>jobId</code>）、
+            <code>GET /api/v1/jobs/:id</code>（查进度）、
+            <code>GET /api/v1/sources</code> / <code>:id</code>（读已沉淀的 StandardMarkdown）、
+            <code>GET /api/v1/plugins</code>（实时展示插件健康状态）。
+          </li>
+        </ul>
+      </div>
+
+      <div class="milestone">
+        <h3>M3 · 真实抖音样本联调与插槽健壮性验收 <span class="tag tag-orange">端到端真机验真</span></h3>
+        <ul>
+          <li><strong>样本 1（口播短视频分享口令）</strong>：验证短链展开 → 转写 → 重点帧/兜底截图落 <code>u/{userId}/assets/*</code> → 子循环生成干净 Markdown → 落 <code>raw_sources</code> 并可预览生成知识卡草稿。</li>
+          <li><strong>样本 2（抖音图文笔记）</strong>：验证自动跳过 ASR、高清原图入对象存储、Markdown 正确嵌入 <code>asset://</code>。</li>
+          <li><strong>样本 3（拔插容错验证）</strong>：停掉 DTK 容器或卸载 <code>plugin-douyin-dtk</code>，确认 <code>pnpm dev</code> 照常启动、对话问答零影响、<code>/api/v1/plugins</code> 清晰报告降级原因。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7: 待确认拍板点 -->
+  <section id="sec-decisions" class="sec">
+    <div class="sec-head">
+      <h2><span class="sec-num">07</span>开工前只需拍板的 2 个设计点</h2>
+      <p class="sec-sub">确认后即可直接按 M1 → M2 开始编码实现</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="decision-box">
+        <div class="card-top" style="margin-bottom: 8px;">
+          <h3 style="margin:0;">决策 1 · 公共能力域的物理目录</h3>
+          <span class="tag tag-teal">推荐选项 A</span>
+        </div>
+        <p style="margin:0 0 8px; font-size:13.5px; color:var(--dim);">
+          <strong>选项 A（推荐）：</strong>独立建顶层域 <code>packages/capabilities/{mcp-client,asr,media-frames}</code>，与 <code>packages/ingest/*</code> 并列。未来 OCR、PDF 解析、网页抓取、Git 摘要都能平等复用，不绑定“采集”语境。
+        </p>
+        <p style="margin:0; font-size:13.5px; color:var(--dim);">
+          <strong>选项 B：</strong>收敛放在 <code>packages/ingest/capabilities</code> 单包内，包数量更少，但未来非采集模块复用时边界略模糊。
+        </p>
+      </div>
+
+      <div class="decision-box">
+        <div class="card-top" style="margin-bottom: 8px;">
+          <h3 style="margin:0;">决策 2 · 转写与重点截图的默认档位</h3>
+          <span class="tag tag-teal">推荐选项 1</span>
+        </div>
+        <p style="margin:0 0 8px; font-size:13.5px; color:var(--dim);">
+          <strong>选项 1（推荐）：</strong>默认优先用 DTK 自带的离线 FunASR（免 API Key、速度快）+ L2 等分/封面兜底截图；一旦用户配置了带时间戳的 <code>AsrProvider</code>（百炼 <code>paraformer-v2</code> / 本地 <code>faster-whisper</code>），自动升级为 L1 字幕定位重点帧截图。
+        </p>
+        <p style="margin:0; font-size:13.5px; color:var(--dim);">
+          <strong>选项 2：</strong>默认走云端时间戳 ASR（如百炼/硅基），DTK 仅负责解析与媒体下载，从第一天就默认启用 L1 精准时间点截图（需配 ASR API Key）。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>知枝 Web (Zhizhi) · 插槽数据源与公共能力域架构方案（Open Source First）</span>
+    <span>归档路径：<code>docs/specs/zhizhi-ingest-capabilities-plan.html</code> · 生成日期：2026-11-28</span>
+  </footer>
+
+</main>
+
+<script>
+(() => {
+  const buttons = document.querySelectorAll('.tab-btn')
+  const panes = document.querySelectorAll('.tab-pane')
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-tab')
+      buttons.forEach(b => b.classList.toggle('active', b === btn))
+      panes.forEach(p => p.classList.toggle('active', p.id === targetId))
+    })
+  })
+})()
+</script>
+</body>
+</html>
